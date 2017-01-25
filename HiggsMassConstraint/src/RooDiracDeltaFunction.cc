@@ -1,4 +1,4 @@
-#include "../include/RooDiracDeltaFunction.h"
+#include "RooDiracDeltaFunction.h"
 
 using namespace std;
 

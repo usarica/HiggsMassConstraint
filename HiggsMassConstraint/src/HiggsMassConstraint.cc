@@ -1,5 +1,5 @@
-#include <HMassConstraint/HMassConstraint/include/HMassConstraint.h>
 #include <cassert>
+#include "HiggsMassConstraint.h"
 #include "RooFit.h"
 #include "RooNLLVar.h"
 #include "RooMinimizer.h"
@@ -27,7 +27,7 @@ using namespace pat;
 using namespace HMCtoolkit;
 
 
-HMassConstraint::HMassConstraint(
+HiggsMassConstraint::HiggsMassConstraint(
   const Double_t sqrts_,
   RooSpin::VdecayType Vdecay1_,
   RooSpin::VdecayType Vdecay2_,
@@ -41,7 +41,7 @@ HMassConstraint::HMassConstraint(
   intCodeStart(intCodeStart_)
 {
   if (X_spin!=0 && X_spin!=2){
-    cerr << "HMassConstraint::HMassConstraint: Only spin-0 or -2 are supported!" << endl;
+    cerr << "HiggsMassConstraint::HiggsMassConstraint: Only spin-0 or -2 are supported!" << endl;
     assert(0);
   }
 
@@ -61,7 +61,7 @@ HMassConstraint::HMassConstraint(
   constructCompoundPdf();
 }
 
-HMassConstraint::~HMassConstraint(){
+HiggsMassConstraint::~HiggsMassConstraint(){
   destroyCompoundPdf();
   destroyConstraintPdfs();
   destroyPdfFactory();
@@ -69,10 +69,10 @@ HMassConstraint::~HMassConstraint(){
   destroyVariables();
 }
 
-RooAbsPdf* HMassConstraint::getPDF(){ return PDF; }
-SpinPdfFactory* HMassConstraint::getPDFFactory(){ return pdfFactory; }
+RooAbsPdf* HiggsMassConstraint::getPDF(){ return PDF; }
+SpinPdfFactory* HiggsMassConstraint::getPDFFactory(){ return pdfFactory; }
 
-void HMassConstraint::constructVariables(){
+void HiggsMassConstraint::constructVariables(){
   fitResult=0;
   varZero = new RooRealVar("varZero", "", 0.);
   varOne = new RooRealVar("varOne", "", 1.);
@@ -242,7 +242,7 @@ void HMassConstraint::constructVariables(){
   else measurables.Phi1 = 0;
   measurables.Y = Y;
 }
-void HMassConstraint::constructDeltaFunctions(){
+void HiggsMassConstraint::constructDeltaFunctions(){
   RooArgList diracdelta_args;
   for (int iZ=0; iZ<2; iZ++){
     for (int iferm=0; iferm<2; iferm++){
@@ -263,7 +263,7 @@ void HMassConstraint::constructDeltaFunctions(){
   }
   DiracDeltaPDF = new RooProdPdf("DiracDeltaPDF", "DiracDeltaPDF", diracdelta_args);
 }
-void HMassConstraint::constructPdfFactory(){
+void HiggsMassConstraint::constructPdfFactory(){
   hvvFactory=0;
   xvvFactory=0;
   if (X_spin==0){
@@ -328,7 +328,7 @@ void HMassConstraint::constructPdfFactory(){
   delete pdfPars;
 #endif
 }
-void HMassConstraint::constructConstraintPdfs(){
+void HiggsMassConstraint::constructConstraintPdfs(){
   RooArgList constraints;
   /*
   for (int iZ=0; iZ<2; iZ++){
@@ -406,16 +406,16 @@ void HMassConstraint::constructConstraintPdfs(){
   //constraints.add(*(DiracDeltaPDF));
   constraintsPDF = new RooProdPdf("constraintsPDF", "constraintsPDF", constraints);
 }
-void HMassConstraint::constructCompoundPdf(){
+void HiggsMassConstraint::constructCompoundPdf(){
   //RooArgList pdfList(*simpleBWPDF, *constraintsPDF);
   RooArgList pdfList(*spinPDF, *constraintsPDF);
-  PDF = new RooProdPdf("HMassConstraint_PDF", "HMassConstraint_PDF", pdfList);
+  PDF = new RooProdPdf("HiggsMassConstraint_PDF", "HiggsMassConstraint_PDF", pdfList);
 
   RooArgList fastpdfList(*bwProdPDF, *constraintsPDF);
-  fastPDF = new RooProdPdf("HMassConstraint_FastPDF", "HMassConstraint_FastPDF", fastpdfList);
+  fastPDF = new RooProdPdf("HiggsMassConstraint_FastPDF", "HiggsMassConstraint_FastPDF", fastpdfList);
 }
 
-void HMassConstraint::destroyVariables(){
+void HiggsMassConstraint::destroyVariables(){
   // Destroy the fit result, the ultimate culmination of all evil!
   deletePtr(fitResult);
 
@@ -491,7 +491,7 @@ void HMassConstraint::destroyVariables(){
   deletePtr(varOne);
   deletePtr(varZero);
 }
-void HMassConstraint::destroyDeltaFunctions(){
+void HiggsMassConstraint::destroyDeltaFunctions(){
   deletePtr(DiracDeltaPDF);
   for (int iZ=1; iZ>=0; iZ--){
     for (int iferm=1; iferm>=0; iferm--){
@@ -504,7 +504,7 @@ void HMassConstraint::destroyDeltaFunctions(){
     }
   }
 }
-void HMassConstraint::destroyPdfFactory(){
+void HiggsMassConstraint::destroyPdfFactory(){
   // Delete the bwProdPDF and simpleBWPDF first since the measurables and parameters come from the pdfFactory
   deletePtr(simpleBWPDF);
   deletePtr(bwProdPDF);
@@ -514,7 +514,7 @@ void HMassConstraint::destroyPdfFactory(){
   deletePtr(hvvFactory);
   deletePtr(xvvFactory);
 }
-void HMassConstraint::destroyConstraintPdfs(){
+void HiggsMassConstraint::destroyConstraintPdfs(){
   deletePtr(constraintsPDF);
   deletePtr(auxilliaryConstraintsPDF);
   deletePtr(massCuts);
@@ -524,13 +524,13 @@ void HMassConstraint::destroyConstraintPdfs(){
     }
   }
 }
-void HMassConstraint::destroyCompoundPdf(){
+void HiggsMassConstraint::destroyCompoundPdf(){
   deletePtr(fastPDF);
   deletePtr(PDF);
 }
 
-void HMassConstraint::setFastPDF(bool useFastPDF_){ useFastPDF = useFastPDF_; }
-void HMassConstraint::setPtEtaCuts(
+void HiggsMassConstraint::setFastPDF(bool useFastPDF_){ useFastPDF = useFastPDF_; }
+void HiggsMassConstraint::setPtEtaCuts(
   Double_t pTcut_muon_,
   Double_t etacut_muon_,
   Double_t pTcut_electron_,
@@ -555,7 +555,7 @@ void HMassConstraint::setPtEtaCuts(
   else lambdacut_fsr=piovertwo_val;
   // Actual setting of ranges is done per-event
 }
-void HMassConstraint::setM1M2Cuts(
+void HiggsMassConstraint::setM1M2Cuts(
   Double_t m1lowcut_,
   Double_t m2lowcut_,
   Double_t m1highcut_,
@@ -584,306 +584,306 @@ void HMassConstraint::setM1M2Cuts(
 }
 
 
-HMassConstraint::FitMomentumStrategy HMassConstraint::getFitMomentumStrategy(){ return fitMomStrategy_final; }
-void HMassConstraint::setWorkingFitMomentumStrategy(HMassConstraint::FitMomentumStrategy fitMomStrategy_){ fitMomStrategy_final=fitMomStrategy_; }
-void HMassConstraint::setFitMomentumStrategy(HMassConstraint::FitMomentumStrategy fitMomStrategy_){ fitMomStrategy=fitMomStrategy_; setWorkingFitMomentumStrategy(fitMomStrategy_); }
-void HMassConstraint::testFitMomentumStrategy(Int_t& useFullCov, Int_t& FermFSRType, Int_t& fitpT, Int_t& fitlambda, Int_t& fitphi) const{
+HiggsMassConstraint::FitMomentumStrategy HiggsMassConstraint::getFitMomentumStrategy(){ return fitMomStrategy_final; }
+void HiggsMassConstraint::setWorkingFitMomentumStrategy(HiggsMassConstraint::FitMomentumStrategy fitMomStrategy_){ fitMomStrategy_final=fitMomStrategy_; }
+void HiggsMassConstraint::setFitMomentumStrategy(HiggsMassConstraint::FitMomentumStrategy fitMomStrategy_){ fitMomStrategy=fitMomStrategy_; setWorkingFitMomentumStrategy(fitMomStrategy_); }
+void HiggsMassConstraint::testFitMomentumStrategy(Int_t& useFullCov, Int_t& FermFSRType, Int_t& fitpT, Int_t& fitlambda, Int_t& fitphi) const{
 
   if (
-    fitMomStrategy_final==HMassConstraint::FullCov_All_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_pT ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_Lambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_Phi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_pT ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_Lambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_Phi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pT ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSRR_Lambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_Phi
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pT ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_Lambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_Phi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_pT ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_Lambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_Phi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pT ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSRR_Lambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_Phi
     ) useFullCov=1;
   else useFullCov=0;
 
   if (
-    fitMomStrategy_final==HMassConstraint::FullCov_All_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_pT ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_pT ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pT ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_pT ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_pT ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_pT
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pT ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_pT ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pT ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_pT ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_pT ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_pT
     ) fitpT=1;
   else fitpT=0;
 
   if (
-    fitMomStrategy_final==HMassConstraint::FullCov_All_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_Lambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_Lambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSRR_Lambda ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_Lambda ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_Lambda ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_Lambda
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_Lambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_Lambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSRR_Lambda ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_Lambda ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_Lambda ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_Lambda
     ) fitlambda=1;
   else fitlambda=0;
 
   if (
-    fitMomStrategy_final==HMassConstraint::FullCov_All_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_Phi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_Phi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_Phi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_Phi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_Phi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_Phi
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_Phi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_Phi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_Phi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_Phi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_Phi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_Phi
     ) fitphi=1;
   else fitphi=0;
 
   if (
-    fitMomStrategy_final==HMassConstraint::FullCov_All_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_pT ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_Lambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_All_Phi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_pT ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_Lambda ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_All_Phi
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pT ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_Lambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_All_Phi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_pT ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_Lambda ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_Phi
     ) FermFSRType=2;
   else if (
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pT ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSRR_Lambda ||
-    fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_Phi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_pTLambda ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_pTPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_LambdaPhi ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_pT ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_Lambda ||
-    fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_Phi
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pT ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSRR_Lambda ||
+    fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_Phi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTLambda ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_LambdaPhi ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_pT ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_Lambda ||
+    fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_Phi
     ) FermFSRType=1;
   else FermFSRType=0;
 
 /*
-  fitMomStrategy_final==HMassConstraint::FullCov_All_pTLambdaPhi ||
-  fitMomStrategy_final==HMassConstraint::FullCov_All_pTLambda ||
-  fitMomStrategy_final==HMassConstraint::FullCov_All_pTPhi ||
-  fitMomStrategy_final==HMassConstraint::FullCov_All_LambdaPhi ||
-  fitMomStrategy_final==HMassConstraint::FullCov_All_pT ||
-  fitMomStrategy_final==HMassConstraint::FullCov_All_Lambda ||
-  fitMomStrategy_final==HMassConstraint::FullCov_All_Phi ||
-  fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_pTLambdaPhi ||
-  fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_pTLambda ||
-  fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_pTPhi ||
-  fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_LambdaPhi ||
-  fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_pT ||
-  fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_Lambda ||
-  fitMomStrategy_final==HMassConstraint::FullCov_NoFSR_Phi ||
-  fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pTLambdaPhi ||
-  fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pTLambda ||
-  fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pTPhi ||
-  fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_LambdaPhi ||
-  fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_pT ||
-  fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSRR_Lambda ||
-  fitMomStrategy_final==HMassConstraint::FullCov_OnlyFSR_Phi ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_All_pTLambdaPhi ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_All_pTLambda ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_All_pTPhi ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_All_LambdaPhi ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_All_pT ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_All_Lambda ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_All_Phi ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_pTLambdaPhi ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_pTLambda ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_pTPhi ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_LambdaPhi ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_pT ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_Lambda ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_NoFSR_Phi ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_pTLambda ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_pTPhi ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_LambdaPhi ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_pT ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_Lambda ||
-  fitMomStrategy_final==HMassConstraint::CovDiagonals_OnlyFSR_Phi
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pTLambdaPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pTLambda ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pTPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_All_LambdaPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_All_pT ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_All_Lambda ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_All_Phi ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_pTLambdaPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_pTLambda ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_pTPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_LambdaPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_pT ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_Lambda ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_NoFSR_Phi ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pTLambdaPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pTLambda ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pTPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_LambdaPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_pT ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSRR_Lambda ||
+  fitMomStrategy_final==HiggsMassConstraint::FullCov_OnlyFSR_Phi ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_pTLambdaPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_pTLambda ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_pTPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_LambdaPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_pT ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_Lambda ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_All_Phi ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_pTLambdaPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_pTLambda ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_pTPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_LambdaPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_pT ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_Lambda ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_NoFSR_Phi ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTLambda ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_LambdaPhi ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_pT ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_Lambda ||
+  fitMomStrategy_final==HiggsMassConstraint::CovDiagonals_OnlyFSR_Phi
 */
 
 }
-void HMassConstraint::decrementMomentumStrategy(HMassConstraint::FitMomentumStrategy& strategy_){
-  if (strategy_==HMassConstraint::FullCov_All_pTLambdaPhi) strategy_ = HMassConstraint::FullCov_All_pTLambda;
-  else if (strategy_==HMassConstraint::FullCov_All_pTLambda) strategy_ = HMassConstraint::FullCov_All_pTPhi;
-  else if (strategy_==HMassConstraint::FullCov_All_pTPhi) strategy_ = HMassConstraint::FullCov_All_LambdaPhi;
-  else if (strategy_==HMassConstraint::FullCov_All_LambdaPhi) strategy_ = HMassConstraint::FullCov_All_pT;
-  else if (strategy_==HMassConstraint::FullCov_All_pT) strategy_ = HMassConstraint::FullCov_All_Lambda;
-  else if (strategy_==HMassConstraint::FullCov_All_Lambda) strategy_ = HMassConstraint::FullCov_All_Phi;
-  else if (strategy_==HMassConstraint::FullCov_All_Phi) strategy_ = HMassConstraint::FullCov_NoFSR_pTLambdaPhi;
-  else if (strategy_==HMassConstraint::FullCov_NoFSR_pTLambdaPhi) strategy_ = HMassConstraint::FullCov_NoFSR_pTLambda;
-  else if (strategy_==HMassConstraint::FullCov_NoFSR_pTLambda) strategy_ = HMassConstraint::FullCov_NoFSR_pTPhi;
-  else if (strategy_==HMassConstraint::FullCov_NoFSR_pTPhi) strategy_ = HMassConstraint::FullCov_NoFSR_LambdaPhi;
-  else if (strategy_==HMassConstraint::FullCov_NoFSR_LambdaPhi) strategy_ = HMassConstraint::FullCov_NoFSR_pT;
-  else if (strategy_==HMassConstraint::FullCov_NoFSR_pT) strategy_ = HMassConstraint::FullCov_NoFSR_Lambda;
-  else if (strategy_==HMassConstraint::FullCov_NoFSR_Lambda) strategy_ = HMassConstraint::FullCov_NoFSR_Phi;
-  else if (strategy_==HMassConstraint::FullCov_NoFSR_Phi) strategy_ = HMassConstraint::FullCov_OnlyFSR_pTLambdaPhi;
-  else if (strategy_==HMassConstraint::FullCov_OnlyFSR_pTLambdaPhi) strategy_ = HMassConstraint::FullCov_OnlyFSR_pTLambda;
-  else if (strategy_==HMassConstraint::FullCov_OnlyFSR_pTLambda) strategy_ = HMassConstraint::FullCov_OnlyFSR_pTPhi;
-  else if (strategy_==HMassConstraint::FullCov_OnlyFSR_pTPhi) strategy_ = HMassConstraint::FullCov_OnlyFSR_LambdaPhi;
-  else if (strategy_==HMassConstraint::FullCov_OnlyFSR_LambdaPhi) strategy_ = HMassConstraint::FullCov_OnlyFSR_pT;
-  else if (strategy_==HMassConstraint::FullCov_OnlyFSR_pT) strategy_ = HMassConstraint::FullCov_OnlyFSRR_Lambda;
-  else if (strategy_==HMassConstraint::FullCov_OnlyFSRR_Lambda) strategy_ = HMassConstraint::FullCov_OnlyFSR_Phi;
-  else if (strategy_==HMassConstraint::FullCov_OnlyFSR_Phi) strategy_ = HMassConstraint::CovDiagonals_All_pTLambdaPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_All_pTLambdaPhi) strategy_ = HMassConstraint::CovDiagonals_All_pTLambda;
-  else if (strategy_==HMassConstraint::CovDiagonals_All_pTLambda) strategy_ = HMassConstraint::CovDiagonals_All_pTPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_All_pTPhi) strategy_ = HMassConstraint::CovDiagonals_All_LambdaPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_All_LambdaPhi) strategy_ = HMassConstraint::CovDiagonals_All_pT;
-  else if (strategy_==HMassConstraint::CovDiagonals_All_pT) strategy_ = HMassConstraint::CovDiagonals_All_Lambda;
-  else if (strategy_==HMassConstraint::CovDiagonals_All_Lambda) strategy_ = HMassConstraint::CovDiagonals_All_Phi;
-  else if (strategy_==HMassConstraint::CovDiagonals_All_Phi) strategy_ = HMassConstraint::CovDiagonals_NoFSR_pTLambdaPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_NoFSR_pTLambdaPhi) strategy_ = HMassConstraint::CovDiagonals_NoFSR_pTLambda;
-  else if (strategy_==HMassConstraint::CovDiagonals_NoFSR_pTLambda) strategy_ = HMassConstraint::CovDiagonals_NoFSR_pTPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_NoFSR_pTPhi) strategy_ = HMassConstraint::CovDiagonals_NoFSR_LambdaPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_NoFSR_LambdaPhi) strategy_ = HMassConstraint::CovDiagonals_NoFSR_pT;
-  else if (strategy_==HMassConstraint::CovDiagonals_NoFSR_pT) strategy_ = HMassConstraint::CovDiagonals_NoFSR_Lambda;
-  else if (strategy_==HMassConstraint::CovDiagonals_NoFSR_Lambda) strategy_ = HMassConstraint::CovDiagonals_NoFSR_Phi;
-  else if (strategy_==HMassConstraint::CovDiagonals_NoFSR_Phi) strategy_ = HMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi) strategy_ = HMassConstraint::CovDiagonals_OnlyFSR_pTLambda;
-  else if (strategy_==HMassConstraint::CovDiagonals_OnlyFSR_pTLambda) strategy_ = HMassConstraint::CovDiagonals_OnlyFSR_pTPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_OnlyFSR_pTPhi) strategy_ = HMassConstraint::CovDiagonals_OnlyFSR_LambdaPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_OnlyFSR_LambdaPhi) strategy_ = HMassConstraint::CovDiagonals_OnlyFSR_pT;
-  else if (strategy_==HMassConstraint::CovDiagonals_OnlyFSR_pT) strategy_ = HMassConstraint::CovDiagonals_OnlyFSR_Lambda;
-  else if (strategy_==HMassConstraint::CovDiagonals_OnlyFSR_Lambda) strategy_ = HMassConstraint::CovDiagonals_OnlyFSR_Phi;
-  else if (strategy_==HMassConstraint::CovDiagonals_OnlyFSR_Phi) strategy_ = HMassConstraint::nFitMomentumStrategies;
-  else strategy_ = HMassConstraint::nFitMomentumStrategies;
+void HiggsMassConstraint::decrementMomentumStrategy(HiggsMassConstraint::FitMomentumStrategy& strategy_){
+  if (strategy_==HiggsMassConstraint::FullCov_All_pTLambdaPhi) strategy_ = HiggsMassConstraint::FullCov_All_pTLambda;
+  else if (strategy_==HiggsMassConstraint::FullCov_All_pTLambda) strategy_ = HiggsMassConstraint::FullCov_All_pTPhi;
+  else if (strategy_==HiggsMassConstraint::FullCov_All_pTPhi) strategy_ = HiggsMassConstraint::FullCov_All_LambdaPhi;
+  else if (strategy_==HiggsMassConstraint::FullCov_All_LambdaPhi) strategy_ = HiggsMassConstraint::FullCov_All_pT;
+  else if (strategy_==HiggsMassConstraint::FullCov_All_pT) strategy_ = HiggsMassConstraint::FullCov_All_Lambda;
+  else if (strategy_==HiggsMassConstraint::FullCov_All_Lambda) strategy_ = HiggsMassConstraint::FullCov_All_Phi;
+  else if (strategy_==HiggsMassConstraint::FullCov_All_Phi) strategy_ = HiggsMassConstraint::FullCov_NoFSR_pTLambdaPhi;
+  else if (strategy_==HiggsMassConstraint::FullCov_NoFSR_pTLambdaPhi) strategy_ = HiggsMassConstraint::FullCov_NoFSR_pTLambda;
+  else if (strategy_==HiggsMassConstraint::FullCov_NoFSR_pTLambda) strategy_ = HiggsMassConstraint::FullCov_NoFSR_pTPhi;
+  else if (strategy_==HiggsMassConstraint::FullCov_NoFSR_pTPhi) strategy_ = HiggsMassConstraint::FullCov_NoFSR_LambdaPhi;
+  else if (strategy_==HiggsMassConstraint::FullCov_NoFSR_LambdaPhi) strategy_ = HiggsMassConstraint::FullCov_NoFSR_pT;
+  else if (strategy_==HiggsMassConstraint::FullCov_NoFSR_pT) strategy_ = HiggsMassConstraint::FullCov_NoFSR_Lambda;
+  else if (strategy_==HiggsMassConstraint::FullCov_NoFSR_Lambda) strategy_ = HiggsMassConstraint::FullCov_NoFSR_Phi;
+  else if (strategy_==HiggsMassConstraint::FullCov_NoFSR_Phi) strategy_ = HiggsMassConstraint::FullCov_OnlyFSR_pTLambdaPhi;
+  else if (strategy_==HiggsMassConstraint::FullCov_OnlyFSR_pTLambdaPhi) strategy_ = HiggsMassConstraint::FullCov_OnlyFSR_pTLambda;
+  else if (strategy_==HiggsMassConstraint::FullCov_OnlyFSR_pTLambda) strategy_ = HiggsMassConstraint::FullCov_OnlyFSR_pTPhi;
+  else if (strategy_==HiggsMassConstraint::FullCov_OnlyFSR_pTPhi) strategy_ = HiggsMassConstraint::FullCov_OnlyFSR_LambdaPhi;
+  else if (strategy_==HiggsMassConstraint::FullCov_OnlyFSR_LambdaPhi) strategy_ = HiggsMassConstraint::FullCov_OnlyFSR_pT;
+  else if (strategy_==HiggsMassConstraint::FullCov_OnlyFSR_pT) strategy_ = HiggsMassConstraint::FullCov_OnlyFSRR_Lambda;
+  else if (strategy_==HiggsMassConstraint::FullCov_OnlyFSRR_Lambda) strategy_ = HiggsMassConstraint::FullCov_OnlyFSR_Phi;
+  else if (strategy_==HiggsMassConstraint::FullCov_OnlyFSR_Phi) strategy_ = HiggsMassConstraint::CovDiagonals_All_pTLambdaPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_All_pTLambdaPhi) strategy_ = HiggsMassConstraint::CovDiagonals_All_pTLambda;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_All_pTLambda) strategy_ = HiggsMassConstraint::CovDiagonals_All_pTPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_All_pTPhi) strategy_ = HiggsMassConstraint::CovDiagonals_All_LambdaPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_All_LambdaPhi) strategy_ = HiggsMassConstraint::CovDiagonals_All_pT;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_All_pT) strategy_ = HiggsMassConstraint::CovDiagonals_All_Lambda;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_All_Lambda) strategy_ = HiggsMassConstraint::CovDiagonals_All_Phi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_All_Phi) strategy_ = HiggsMassConstraint::CovDiagonals_NoFSR_pTLambdaPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_NoFSR_pTLambdaPhi) strategy_ = HiggsMassConstraint::CovDiagonals_NoFSR_pTLambda;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_NoFSR_pTLambda) strategy_ = HiggsMassConstraint::CovDiagonals_NoFSR_pTPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_NoFSR_pTPhi) strategy_ = HiggsMassConstraint::CovDiagonals_NoFSR_LambdaPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_NoFSR_LambdaPhi) strategy_ = HiggsMassConstraint::CovDiagonals_NoFSR_pT;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_NoFSR_pT) strategy_ = HiggsMassConstraint::CovDiagonals_NoFSR_Lambda;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_NoFSR_Lambda) strategy_ = HiggsMassConstraint::CovDiagonals_NoFSR_Phi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_NoFSR_Phi) strategy_ = HiggsMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi) strategy_ = HiggsMassConstraint::CovDiagonals_OnlyFSR_pTLambda;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTLambda) strategy_ = HiggsMassConstraint::CovDiagonals_OnlyFSR_pTPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTPhi) strategy_ = HiggsMassConstraint::CovDiagonals_OnlyFSR_LambdaPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_OnlyFSR_LambdaPhi) strategy_ = HiggsMassConstraint::CovDiagonals_OnlyFSR_pT;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_OnlyFSR_pT) strategy_ = HiggsMassConstraint::CovDiagonals_OnlyFSR_Lambda;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_OnlyFSR_Lambda) strategy_ = HiggsMassConstraint::CovDiagonals_OnlyFSR_Phi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_OnlyFSR_Phi) strategy_ = HiggsMassConstraint::nFitMomentumStrategies;
+  else strategy_ = HiggsMassConstraint::nFitMomentumStrategies;
 }
-void HMassConstraint::incrementMomentumStrategy(HMassConstraint::FitMomentumStrategy& strategy_){
-  if (strategy_==HMassConstraint::FullCov_All_pTLambdaPhi) strategy_ = HMassConstraint::nFitMomentumStrategies;
-  else if (strategy_==HMassConstraint::FullCov_All_pTLambda) strategy_ = HMassConstraint::FullCov_All_pTLambdaPhi;
-  else if (strategy_==HMassConstraint::FullCov_All_pTPhi) strategy_ = HMassConstraint::FullCov_All_pTLambda;
-  else if (strategy_==HMassConstraint::FullCov_All_LambdaPhi) strategy_ = HMassConstraint::FullCov_All_pTPhi;
-  else if (strategy_==HMassConstraint::FullCov_All_pT) strategy_ = HMassConstraint::FullCov_All_LambdaPhi;
-  else if (strategy_==HMassConstraint::FullCov_All_Lambda) strategy_ = HMassConstraint::FullCov_All_pT;
-  else if (strategy_==HMassConstraint::FullCov_All_Phi) strategy_ = HMassConstraint::FullCov_All_Lambda;
-  else if (strategy_==HMassConstraint::FullCov_NoFSR_pTLambdaPhi) strategy_ = HMassConstraint::FullCov_All_Phi;
-  else if (strategy_==HMassConstraint::FullCov_NoFSR_pTLambda) strategy_ = HMassConstraint::FullCov_NoFSR_pTLambdaPhi;
-  else if (strategy_==HMassConstraint::FullCov_NoFSR_pTPhi) strategy_ = HMassConstraint::FullCov_NoFSR_pTLambda;
-  else if (strategy_==HMassConstraint::FullCov_NoFSR_LambdaPhi) strategy_ = HMassConstraint::FullCov_NoFSR_pTPhi;
-  else if (strategy_==HMassConstraint::FullCov_NoFSR_pT) strategy_ = HMassConstraint::FullCov_NoFSR_LambdaPhi;
-  else if (strategy_==HMassConstraint::FullCov_NoFSR_Lambda) strategy_ = HMassConstraint::FullCov_NoFSR_pT;
-  else if (strategy_==HMassConstraint::FullCov_NoFSR_Phi) strategy_ = HMassConstraint::FullCov_NoFSR_Lambda;
-  else if (strategy_==HMassConstraint::FullCov_OnlyFSR_pTLambdaPhi) strategy_ = HMassConstraint::FullCov_NoFSR_Phi;
-  else if (strategy_==HMassConstraint::FullCov_OnlyFSR_pTLambda) strategy_ = HMassConstraint::FullCov_OnlyFSR_pTLambdaPhi;
-  else if (strategy_==HMassConstraint::FullCov_OnlyFSR_pTPhi) strategy_ = HMassConstraint::FullCov_OnlyFSR_pTLambda;
-  else if (strategy_==HMassConstraint::FullCov_OnlyFSR_LambdaPhi) strategy_ = HMassConstraint::FullCov_OnlyFSR_pTPhi;
-  else if (strategy_==HMassConstraint::FullCov_OnlyFSR_pT) strategy_ = HMassConstraint::FullCov_OnlyFSR_LambdaPhi;
-  else if (strategy_==HMassConstraint::FullCov_OnlyFSRR_Lambda) strategy_ = HMassConstraint::FullCov_OnlyFSR_pT;
-  else if (strategy_==HMassConstraint::FullCov_OnlyFSR_Phi) strategy_ = HMassConstraint::FullCov_OnlyFSRR_Lambda;
-  else if (strategy_==HMassConstraint::CovDiagonals_All_pTLambdaPhi) strategy_ = HMassConstraint::FullCov_OnlyFSR_Phi;
-  else if (strategy_==HMassConstraint::CovDiagonals_All_pTLambda) strategy_ = HMassConstraint::CovDiagonals_All_pTLambdaPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_All_pTPhi) strategy_ = HMassConstraint::CovDiagonals_All_pTLambda;
-  else if (strategy_==HMassConstraint::CovDiagonals_All_LambdaPhi) strategy_ = HMassConstraint::CovDiagonals_All_pTPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_All_pT) strategy_ = HMassConstraint::CovDiagonals_All_LambdaPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_All_Lambda) strategy_ = HMassConstraint::CovDiagonals_All_pT;
-  else if (strategy_==HMassConstraint::CovDiagonals_All_Phi) strategy_ = HMassConstraint::CovDiagonals_All_Lambda;
-  else if (strategy_==HMassConstraint::CovDiagonals_NoFSR_pTLambdaPhi) strategy_ = HMassConstraint::CovDiagonals_All_Phi;
-  else if (strategy_==HMassConstraint::CovDiagonals_NoFSR_pTLambda) strategy_ = HMassConstraint::CovDiagonals_NoFSR_pTLambdaPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_NoFSR_pTPhi) strategy_ = HMassConstraint::CovDiagonals_NoFSR_pTLambda;
-  else if (strategy_==HMassConstraint::CovDiagonals_NoFSR_LambdaPhi) strategy_ = HMassConstraint::CovDiagonals_NoFSR_pTPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_NoFSR_pT) strategy_ = HMassConstraint::CovDiagonals_NoFSR_LambdaPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_NoFSR_Lambda) strategy_ = HMassConstraint::CovDiagonals_NoFSR_pT;
-  else if (strategy_==HMassConstraint::CovDiagonals_NoFSR_Phi) strategy_ = HMassConstraint::CovDiagonals_NoFSR_Lambda;
-  else if (strategy_==HMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi) strategy_ = HMassConstraint::CovDiagonals_NoFSR_Phi;
-  else if (strategy_==HMassConstraint::CovDiagonals_OnlyFSR_pTLambda) strategy_ = HMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_OnlyFSR_pTPhi) strategy_ = HMassConstraint::CovDiagonals_OnlyFSR_pTLambda;
-  else if (strategy_==HMassConstraint::CovDiagonals_OnlyFSR_LambdaPhi) strategy_ = HMassConstraint::CovDiagonals_OnlyFSR_pTPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_OnlyFSR_pT) strategy_ = HMassConstraint::CovDiagonals_OnlyFSR_LambdaPhi;
-  else if (strategy_==HMassConstraint::CovDiagonals_OnlyFSR_Lambda) strategy_ = HMassConstraint::CovDiagonals_OnlyFSR_pT;
-  else if (strategy_==HMassConstraint::CovDiagonals_OnlyFSR_Phi) strategy_ = HMassConstraint::CovDiagonals_OnlyFSR_Lambda;
-  else strategy_ = HMassConstraint::nFitMomentumStrategies;
+void HiggsMassConstraint::incrementMomentumStrategy(HiggsMassConstraint::FitMomentumStrategy& strategy_){
+  if (strategy_==HiggsMassConstraint::FullCov_All_pTLambdaPhi) strategy_ = HiggsMassConstraint::nFitMomentumStrategies;
+  else if (strategy_==HiggsMassConstraint::FullCov_All_pTLambda) strategy_ = HiggsMassConstraint::FullCov_All_pTLambdaPhi;
+  else if (strategy_==HiggsMassConstraint::FullCov_All_pTPhi) strategy_ = HiggsMassConstraint::FullCov_All_pTLambda;
+  else if (strategy_==HiggsMassConstraint::FullCov_All_LambdaPhi) strategy_ = HiggsMassConstraint::FullCov_All_pTPhi;
+  else if (strategy_==HiggsMassConstraint::FullCov_All_pT) strategy_ = HiggsMassConstraint::FullCov_All_LambdaPhi;
+  else if (strategy_==HiggsMassConstraint::FullCov_All_Lambda) strategy_ = HiggsMassConstraint::FullCov_All_pT;
+  else if (strategy_==HiggsMassConstraint::FullCov_All_Phi) strategy_ = HiggsMassConstraint::FullCov_All_Lambda;
+  else if (strategy_==HiggsMassConstraint::FullCov_NoFSR_pTLambdaPhi) strategy_ = HiggsMassConstraint::FullCov_All_Phi;
+  else if (strategy_==HiggsMassConstraint::FullCov_NoFSR_pTLambda) strategy_ = HiggsMassConstraint::FullCov_NoFSR_pTLambdaPhi;
+  else if (strategy_==HiggsMassConstraint::FullCov_NoFSR_pTPhi) strategy_ = HiggsMassConstraint::FullCov_NoFSR_pTLambda;
+  else if (strategy_==HiggsMassConstraint::FullCov_NoFSR_LambdaPhi) strategy_ = HiggsMassConstraint::FullCov_NoFSR_pTPhi;
+  else if (strategy_==HiggsMassConstraint::FullCov_NoFSR_pT) strategy_ = HiggsMassConstraint::FullCov_NoFSR_LambdaPhi;
+  else if (strategy_==HiggsMassConstraint::FullCov_NoFSR_Lambda) strategy_ = HiggsMassConstraint::FullCov_NoFSR_pT;
+  else if (strategy_==HiggsMassConstraint::FullCov_NoFSR_Phi) strategy_ = HiggsMassConstraint::FullCov_NoFSR_Lambda;
+  else if (strategy_==HiggsMassConstraint::FullCov_OnlyFSR_pTLambdaPhi) strategy_ = HiggsMassConstraint::FullCov_NoFSR_Phi;
+  else if (strategy_==HiggsMassConstraint::FullCov_OnlyFSR_pTLambda) strategy_ = HiggsMassConstraint::FullCov_OnlyFSR_pTLambdaPhi;
+  else if (strategy_==HiggsMassConstraint::FullCov_OnlyFSR_pTPhi) strategy_ = HiggsMassConstraint::FullCov_OnlyFSR_pTLambda;
+  else if (strategy_==HiggsMassConstraint::FullCov_OnlyFSR_LambdaPhi) strategy_ = HiggsMassConstraint::FullCov_OnlyFSR_pTPhi;
+  else if (strategy_==HiggsMassConstraint::FullCov_OnlyFSR_pT) strategy_ = HiggsMassConstraint::FullCov_OnlyFSR_LambdaPhi;
+  else if (strategy_==HiggsMassConstraint::FullCov_OnlyFSRR_Lambda) strategy_ = HiggsMassConstraint::FullCov_OnlyFSR_pT;
+  else if (strategy_==HiggsMassConstraint::FullCov_OnlyFSR_Phi) strategy_ = HiggsMassConstraint::FullCov_OnlyFSRR_Lambda;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_All_pTLambdaPhi) strategy_ = HiggsMassConstraint::FullCov_OnlyFSR_Phi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_All_pTLambda) strategy_ = HiggsMassConstraint::CovDiagonals_All_pTLambdaPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_All_pTPhi) strategy_ = HiggsMassConstraint::CovDiagonals_All_pTLambda;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_All_LambdaPhi) strategy_ = HiggsMassConstraint::CovDiagonals_All_pTPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_All_pT) strategy_ = HiggsMassConstraint::CovDiagonals_All_LambdaPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_All_Lambda) strategy_ = HiggsMassConstraint::CovDiagonals_All_pT;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_All_Phi) strategy_ = HiggsMassConstraint::CovDiagonals_All_Lambda;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_NoFSR_pTLambdaPhi) strategy_ = HiggsMassConstraint::CovDiagonals_All_Phi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_NoFSR_pTLambda) strategy_ = HiggsMassConstraint::CovDiagonals_NoFSR_pTLambdaPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_NoFSR_pTPhi) strategy_ = HiggsMassConstraint::CovDiagonals_NoFSR_pTLambda;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_NoFSR_LambdaPhi) strategy_ = HiggsMassConstraint::CovDiagonals_NoFSR_pTPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_NoFSR_pT) strategy_ = HiggsMassConstraint::CovDiagonals_NoFSR_LambdaPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_NoFSR_Lambda) strategy_ = HiggsMassConstraint::CovDiagonals_NoFSR_pT;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_NoFSR_Phi) strategy_ = HiggsMassConstraint::CovDiagonals_NoFSR_Lambda;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi) strategy_ = HiggsMassConstraint::CovDiagonals_NoFSR_Phi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTLambda) strategy_ = HiggsMassConstraint::CovDiagonals_OnlyFSR_pTLambdaPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_OnlyFSR_pTPhi) strategy_ = HiggsMassConstraint::CovDiagonals_OnlyFSR_pTLambda;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_OnlyFSR_LambdaPhi) strategy_ = HiggsMassConstraint::CovDiagonals_OnlyFSR_pTPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_OnlyFSR_pT) strategy_ = HiggsMassConstraint::CovDiagonals_OnlyFSR_LambdaPhi;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_OnlyFSR_Lambda) strategy_ = HiggsMassConstraint::CovDiagonals_OnlyFSR_pT;
+  else if (strategy_==HiggsMassConstraint::CovDiagonals_OnlyFSR_Phi) strategy_ = HiggsMassConstraint::CovDiagonals_OnlyFSR_Lambda;
+  else strategy_ = HiggsMassConstraint::nFitMomentumStrategies;
 }
 
-void HMassConstraint::setFitVVStrategy(HMassConstraint::FitVVStrategy fitVVStrategy_){ fitVVStrategy=fitVVStrategy_; }
-void HMassConstraint::testFitVVStrategy(Int_t& fitV1, Int_t& fitV2) const{
+void HiggsMassConstraint::setFitVVStrategy(HiggsMassConstraint::FitVVStrategy fitVVStrategy_){ fitVVStrategy=fitVVStrategy_; }
+void HiggsMassConstraint::testFitVVStrategy(Int_t& fitV1, Int_t& fitV2) const{
   if (
-    fitVVStrategy==HMassConstraint::Fit_All_V1V2 ||
-    fitVVStrategy==HMassConstraint::Fit_All_V1
+    fitVVStrategy==HiggsMassConstraint::Fit_All_V1V2 ||
+    fitVVStrategy==HiggsMassConstraint::Fit_All_V1
     ) fitV1=1;
   else fitV1=0;
   if (
-    fitVVStrategy==HMassConstraint::Fit_All_V1V2 ||
-    fitVVStrategy==HMassConstraint::Fit_All_V2
+    fitVVStrategy==HiggsMassConstraint::Fit_All_V1V2 ||
+    fitVVStrategy==HiggsMassConstraint::Fit_All_V2
     ) fitV2=1;
   else fitV2=0;
 }
 
-void HMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, const pat::PFParticle*>>& FermionWithFSR, bool fitRetry){ // Candidate supports jets as well! FSR is also a reco::Candidate daughter.
+void HiggsMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, const pat::PFParticle*>>& FermionWithFSR, bool fitRetry){ // Candidate supports jets as well! FSR is also a reco::Candidate daughter.
   // If the current trial is fresh, reset relevant variables.
   if (!fitRetry){
     setWorkingFitMomentumStrategy(fitMomStrategy);
@@ -903,10 +903,10 @@ void HMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, cons
   int iZ = 0;
   for (std::vector<pair<const reco::Candidate*, const pat::PFParticle*>>::iterator dau=FermionWithFSR.begin(); dau<FermionWithFSR.end(); dau++){
     const reco::Candidate* fermion = (*dau).first;
-    if (fermion==0){ cerr << "HMassConstraint::addDaughters : Daughter " << ndaughters << " pointer is 0!" << endl; break; }
+    if (fermion==0){ cerr << "HiggsMassConstraint::addDaughters : Daughter " << ndaughters << " pointer is 0!" << endl; break; }
     else{
       ndaughters++;
-      if (ndaughters>4){ cerr << "HMassConstraint::addDaughters : Number of daughters (" << ndaughters << ") exceeds 4!" << endl; break; }
+      if (ndaughters>4){ cerr << "HiggsMassConstraint::addDaughters : Number of daughters (" << ndaughters << ") exceeds 4!" << endl; break; }
       else{
         if (!fitRetry) inputRaw_Fermion_FSR.push_back(*dau);
 
@@ -929,9 +929,9 @@ void HMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, cons
         pdgid_ferm[iZ][iferm] = pdgid;
         if (!(abs(pdgid_ferm[iZ][iferm])==pdgEle || abs(pdgid_ferm[iZ][iferm])==pdgMu || abs(pdgid_ferm[iZ][iferm])==pdgTau)) pdgid_ferm[iZ][iferm]=pdgJet; // Needs to be more thorough if jets are passsed
 #if hmc_debug==1
-        cout << "HMassConstraint::addDaughters : Daughter with PDG id " << pdgid << " is assigned to iZ=" << iZ << " and iferm=" << iferm << " with effective id " << pdgid_ferm[iZ][iferm] << endl;
-        cout << "HMassConstraint::addDaughters : Daughter (px, py, pz, E) = (" << fermion->px() << '\t' << fermion->py() << '\t' << fermion->pz() << '\t' << fermion->energy() << endl;
-        cout << "HMassConstraint::addDaughters : Daughter (pT, theta, phi, mass) = (" << fermion->pt() << '\t' << fermion->theta() << " (lambda=" << (piovertwo_val-fermion->theta()) << ")" << '\t' << fermion->phi() << '\t' << fermion->mass() << endl;
+        cout << "HiggsMassConstraint::addDaughters : Daughter with PDG id " << pdgid << " is assigned to iZ=" << iZ << " and iferm=" << iferm << " with effective id " << pdgid_ferm[iZ][iferm] << endl;
+        cout << "HiggsMassConstraint::addDaughters : Daughter (px, py, pz, E) = (" << fermion->px() << '\t' << fermion->py() << '\t' << fermion->pz() << '\t' << fermion->energy() << endl;
+        cout << "HiggsMassConstraint::addDaughters : Daughter (pT, theta, phi, mass) = (" << fermion->pt() << '\t' << fermion->theta() << " (lambda=" << (piovertwo_val-fermion->theta()) << ")" << '\t' << fermion->phi() << '\t' << fermion->mass() << endl;
 #endif
 
         // Set bar-momenta ranges
@@ -1019,7 +1019,7 @@ void HMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, cons
           sortGetCovarianceMatrix(coefMat_ferm, fermion);
 
 #if hmc_debug==1
-          cout << "HMassConstraint::addDaughters : Daughter " << iZ << " / " << iferm << " input covariance matrix:" << endl;
+          cout << "HiggsMassConstraint::addDaughters : Daughter " << iZ << " / " << iferm << " input covariance matrix:" << endl;
           for (int ix=0; ix<3; ix++){ for (int iy=0; iy<3; iy++) cout << coefMat_ferm[3*ix+iy] << '\t'; cout << endl; }
 #endif
           if (coefMat_ferm[3*0+0]==0. && coefMat_ferm[3*0+1]==0. && coefMat_ferm[3*0+2]==0.) pT_ferm[iZ][iferm]->setConstant(true);
@@ -1048,7 +1048,7 @@ void HMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, cons
         Double_t coefMat_fsr[9] ={ 0 };
         if (gamma!=0){
 #if hmc_debug==1
-          cout << "HMassConstraint::addDaughters : An FSR is assigned to iZ=" << iZ << " and iferm=" << iferm << endl;
+          cout << "HiggsMassConstraint::addDaughters : An FSR is assigned to iZ=" << iZ << " and iferm=" << iferm << endl;
 #endif
           // Set FSR bar-momenta ranges
           pTbar_fsr[iZ][iferm]->setConstant(false);
@@ -1103,7 +1103,7 @@ void HMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, cons
             sortGetCovarianceMatrix(coefMat_fsr, fermion);
 
 #if hmc_debug==1
-            cout << "HMassConstraint::addDaughters : Daughter " << iZ << " / " << iferm << " FSR input covariance matrix:" << endl;
+            cout << "HiggsMassConstraint::addDaughters : Daughter " << iZ << " / " << iferm << " FSR input covariance matrix:" << endl;
             for (int ix=0; ix<3; ix++){ for (int iy=0; iy<3; iy++) cout << coefMat_fsr[3*ix+iy] << '\t'; cout << endl; }
 #endif
             if (coefMat_fsr[3*0+0]==0. && coefMat_fsr[3*0+1]==0. && coefMat_fsr[3*0+2]==0.) pT_fsr[iZ][iferm]->setConstant(true);
@@ -1161,7 +1161,7 @@ void HMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, cons
     for (int iferm=0; iferm<2; iferm++){
       if (pdgid_ferm[iZ][iferm]!=pdgUnknown) continue;
 #if hmc_debug==1
-      cout << "HMassConstraint::addDaughters : Particle at iZ=" << iZ << " and iferm=" << iferm << " is not assigned. Fixing it to 0." << endl;
+      cout << "HiggsMassConstraint::addDaughters : Particle at iZ=" << iZ << " and iferm=" << iferm << " is not assigned. Fixing it to 0." << endl;
 #endif
 
       massbar_ferm[iZ][iferm]->setConstant(false); massbar_ferm[iZ][iferm]->setRange(0., sqrts); massbar_ferm[iZ][iferm]->setVal(0.); massbar_ferm[iZ][iferm]->setRange(0., 0.); massbar_ferm[iZ][iferm]->setConstant(true);
@@ -1259,17 +1259,17 @@ void HMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, cons
 #endif
 }
 
-void HMassConstraint::fitTo(std::vector<pair<const reco::Candidate*, const pat::PFParticle*>>& FermionWithFSR){
+void HiggsMassConstraint::fitTo(std::vector<pair<const reco::Candidate*, const pat::PFParticle*>>& FermionWithFSR){
 #if hmc_debug==1
-  cout << "\n\nHMassConstraint::fitTo is called." << endl;
+  cout << "\n\nHiggsMassConstraint::fitTo is called." << endl;
 #endif
   addDaughters(FermionWithFSR);
   fit();
 #if hmc_debug==1
-  cout << "HMassConstraint::fitTo is terminating.\n\n" << endl;
+  cout << "HiggsMassConstraint::fitTo is terminating.\n\n" << endl;
 #endif
 }
-void HMassConstraint::getDataVariables(RooArgSet* intVars, RooArgSet* condVars) const{
+void HiggsMassConstraint::getDataVariables(RooArgSet* intVars, RooArgSet* condVars) const{
   if (intVars!=0){
     if (intCodeStart%RooSpin::prime_h1 != 0) intVars->add(*(h1));
     if (intCodeStart%RooSpin::prime_h2 != 0) intVars->add(*(h2));
@@ -1327,7 +1327,7 @@ void HMassConstraint::getDataVariables(RooArgSet* intVars, RooArgSet* condVars) 
     }
   }
 }
-RooDataSet* HMassConstraint::getDataset(RooArgSet* condVars) const{
+RooDataSet* HiggsMassConstraint::getDataset(RooArgSet* condVars) const{
   RooArgSet data_args;
   RooArgSet cond_args;
   getDataVariables(&data_args, &cond_args);
@@ -1340,17 +1340,17 @@ RooDataSet* HMassConstraint::getDataset(RooArgSet* condVars) const{
     data = new RooDataSet("fittedHdaughters", "", data_args);
     data->add(data_args);
 #if hmc_debug==1
-    cout << "HMassConstraint::getDataset: Number of arguments: " << data_args.getSize() << endl;
-    cout << "HMassConstraint::getDataset: Data:" << endl;
+    cout << "HiggsMassConstraint::getDataset: Number of arguments: " << data_args.getSize() << endl;
+    cout << "HiggsMassConstraint::getDataset: Data:" << endl;
     data->Print("v");
     cout << endl;
 #endif
   }
   return data;
 }
-void HMassConstraint::fit(){
+void HiggsMassConstraint::fit(){
 #if hmc_debug==1
-  cout << "Begin HMassConstraint::fit()" << endl;
+  cout << "Begin HiggsMassConstraint::fit()" << endl;
 #endif
 
   // Get the data to fit
@@ -1361,13 +1361,13 @@ void HMassConstraint::fit(){
   if (useFastPDF){
     activePDF = fastPDF;
 #if hmc_debug==1
-    cout << "HMassConstraint::fit: FastPDF option is active. The PDF being used is " << activePDF->GetName() << "." << endl;
+    cout << "HiggsMassConstraint::fit: FastPDF option is active. The PDF being used is " << activePDF->GetName() << "." << endl;
 #endif
   }
   else{
     activePDF = PDF;
 #if hmc_debug==1
-    cout << "HMassConstraint::fit: FastPDF option is not active. The PDF being used is " << activePDF->GetName() << "." << endl;
+    cout << "HiggsMassConstraint::fit: FastPDF option is not active. The PDF being used is " << activePDF->GetName() << "." << endl;
 #endif
   }
 #if hmc_debug==1
@@ -1397,7 +1397,7 @@ void HMassConstraint::fit(){
   Int_t fitStatus=-999;
   // Set the fit commands
 #if hmc_debug==1
-  cout << "HMassConstraint::fit: Attempting first fit." << endl;
+  cout << "HiggsMassConstraint::fit: Attempting first fit." << endl;
 #endif
   RooLinkedList cmdList;
   RooCmdArg condObsArg = RooFit::ConditionalObservables(conditionals); cmdList.Add((TObject*)&condObsArg);
@@ -1418,7 +1418,7 @@ void HMassConstraint::fit(){
     fitStatus = fitResult->status();
   }
 #if hmc_debug==1
-  cout << "HMassConstraint::fit: First fit attempted." << endl;
+  cout << "HiggsMassConstraint::fit: First fit attempted." << endl;
   if (fitResult!=0){
     cout << "Fit status is " << fitStatus << endl;
     cout << "Fit properties:" << endl;
@@ -1428,8 +1428,8 @@ void HMassConstraint::fit(){
   // If the default strategy fails, decrement it until there is no strategy.
   while (fitStatus!=minimizerSuccess){
     decrementMomentumStrategy(fitMomStrategy_final);
-    if (fitMomStrategy_final==HMassConstraint::nFitMomentumStrategies) break;
-    cerr << "HMassConstraint::fit: Fit did not converge or was not valid. Status changed from " << fitMomStrategy << " to " << fitMomStrategy_final << " to retry." << endl;
+    if (fitMomStrategy_final==HiggsMassConstraint::nFitMomentumStrategies) break;
+    cerr << "HiggsMassConstraint::fit: Fit did not converge or was not valid. Status changed from " << fitMomStrategy << " to " << fitMomStrategy_final << " to retry." << endl;
 
     vector<pair<const reco::Candidate*, const pat::PFParticle*>> pseudoinput = inputRaw_Fermion_FSR;
     addDaughters(pseudoinput, true); deletePtr(data); data = getDataset();
@@ -1444,8 +1444,8 @@ void HMassConstraint::fit(){
   if (fitStatus!=minimizerSuccess) setWorkingFitMomentumStrategy(fitMomStrategy);
   while (fitStatus!=minimizerSuccess){
     incrementMomentumStrategy(fitMomStrategy_final);
-    if (fitMomStrategy_final==HMassConstraint::nFitMomentumStrategies) break;
-    cerr << "HMassConstraint::fit: Fit did not converge. Status changed from " << fitMomStrategy << " to " << fitMomStrategy_final << " to retry." << endl;
+    if (fitMomStrategy_final==HiggsMassConstraint::nFitMomentumStrategies) break;
+    cerr << "HiggsMassConstraint::fit: Fit did not converge. Status changed from " << fitMomStrategy << " to " << fitMomStrategy_final << " to retry." << endl;
 
     vector<pair<const reco::Candidate*, const pat::PFParticle*>> pseudoinput = inputRaw_Fermion_FSR;
     addDaughters(pseudoinput, true); deletePtr(data); data = getDataset();
@@ -1513,7 +1513,7 @@ void HMassConstraint::fit(){
   deletePtr(data);
 }
 
-void HMassConstraint::sortGetCovarianceMatrix(double (&momCov)[9], const reco::Candidate* particle){
+void HiggsMassConstraint::sortGetCovarianceMatrix(double (&momCov)[9], const reco::Candidate* particle){
   const reco::GsfElectron* electron = dynamic_cast<const reco::GsfElectron*>(particle);
   const reco::PFCandidate* pfcand = dynamic_cast<const reco::PFCandidate*>(particle);
   const pat::Muon* muon = dynamic_cast<const pat::Muon*>(particle);
@@ -1527,16 +1527,16 @@ void HMassConstraint::sortGetCovarianceMatrix(double (&momCov)[9], const reco::C
   else if (electron!=0) return getCovarianceMatrix(momCov, electron);
   else{
 #if hmc_debug==1
-    cout << "HMassConstraint::sortGetCovarianceMatrix: Could not determine the type of particle " << particle << ". Setting all covariance matrices to 0." << endl;
+    cout << "HiggsMassConstraint::sortGetCovarianceMatrix: Could not determine the type of particle " << particle << ". Setting all covariance matrices to 0." << endl;
 #endif
     for(int i=0;i<9;i++) momCov[i]=0.;
   }
 }
-void HMassConstraint::getCovarianceMatrix(double (&momCov)[9], const reco::GsfElectron* particle){
+void HiggsMassConstraint::getCovarianceMatrix(double (&momCov)[9], const reco::GsfElectron* particle){
   for(int i=0;i<9;i++) momCov[i]=0.;
 
 #if hmc_debug==1
-  cout << "Begin HMassConstraint::getCovarianceMatrix(const reco::GsfElectron* particle) with argument " << particle << endl;
+  cout << "Begin HiggsMassConstraint::getCovarianceMatrix(const reco::GsfElectron* particle) with argument " << particle << endl;
 #endif
 
   double lambda = piovertwo_val - particle->theta();
@@ -1558,14 +1558,14 @@ void HMassConstraint::getCovarianceMatrix(double (&momCov)[9], const reco::GsfEl
     energyerr = ecalEnergy * sqrt(err2);
   }
 #if hmc_debug==1
-  cout << "HMassConstraint::getCovarianceMatrix(const reco::GsfElectron* particle): Energy error before GsfTrack: " << energyerr << endl;
+  cout << "HiggsMassConstraint::getCovarianceMatrix(const reco::GsfElectron* particle): Energy error before GsfTrack: " << energyerr << endl;
 #endif
 
   double pterr = energyerr*cos(lambda);
   const GsfTrack* gsftrack = &(*(particle->gsfTrack()));
   if (gsftrack!=0){
 #if hmc_debug==1
-    cout << "HMassConstraint::getCovarianceMatrix(const reco::GsfElectron* particle): GsfTrack " << gsftrack << " found!" << endl;
+    cout << "HiggsMassConstraint::getCovarianceMatrix(const reco::GsfElectron* particle): GsfTrack " << gsftrack << " found!" << endl;
 #endif
     double pterr_uncorrected = gsftrack->ptModeError();
     if (pterr_uncorrected==0.) pterr_uncorrected = pterr;
@@ -1651,13 +1651,13 @@ void HMassConstraint::getCovarianceMatrix(double (&momCov)[9], const reco::GsfEl
   }
   else{
 #if hmc_debug==1
-    cout << "HMassConstraint::getCovarianceMatrix(const reco::GsfElectron* particle): No GsfTrack present." << endl;
+    cout << "HiggsMassConstraint::getCovarianceMatrix(const reco::GsfElectron* particle): No GsfTrack present." << endl;
 #endif
     momCov[3*0+0] = pow(pterr, 2);
     // Everything else remains 0.
   }
 }
-void HMassConstraint::getCovarianceMatrix(double (&momCov)[9], const pat::Muon* particle){
+void HiggsMassConstraint::getCovarianceMatrix(double (&momCov)[9], const pat::Muon* particle){
   for(int i=0;i<9;i++) momCov[i]=0.;
 
   const double lambda = piovertwo_val - particle->theta();
@@ -1745,7 +1745,7 @@ void HMassConstraint::getCovarianceMatrix(double (&momCov)[9], const pat::Muon* 
     2.* d_phi_d_lambda*d_phi_d_phi * trackCov[TrackBase::dimension*TrackBase::i_lambda + TrackBase::i_phi]
     ;
 }
-void HMassConstraint::getCovarianceMatrix(double (&momCov)[9], const reco::PFCandidate* particle){
+void HiggsMassConstraint::getCovarianceMatrix(double (&momCov)[9], const reco::PFCandidate* particle){
   for(int i=0;i<9;i++) momCov[i]=0.;
 
   double lambda = piovertwo_val - particle->theta();
@@ -1755,7 +1755,7 @@ void HMassConstraint::getCovarianceMatrix(double (&momCov)[9], const reco::PFCan
   const reco::Track* track = &(*(particle->bestTrack()));
   if (track!=0){
 #if hmc_debug==1
-    cout << "HMassConstraint::getCovarianceMatrix(const reco::PFCandidate* particle): Track " << track << " found!" << endl;
+    cout << "HiggsMassConstraint::getCovarianceMatrix(const reco::PFCandidate* particle): Track " << track << " found!" << endl;
 #endif
     double pterr_uncorrected = track->ptError();
     if (pterr_uncorrected==0.) pterr_uncorrected = pterr;
@@ -1841,13 +1841,13 @@ void HMassConstraint::getCovarianceMatrix(double (&momCov)[9], const reco::PFCan
   }
   else{
 #if hmc_debug==1
-    cout << "HMassConstraint::getCovarianceMatrix(const reco::PFCandidate* particle): No track present." << endl;
+    cout << "HiggsMassConstraint::getCovarianceMatrix(const reco::PFCandidate* particle): No track present." << endl;
 #endif
   momCov[3*0+0] = pow(pterr, 2);
   // Everything else is 0. I know this cannot be correct, but let's work with it for now.
   }
 }
-void HMassConstraint::getCovarianceMatrix(double (&momCov)[9], const pat::Jet* particle){
+void HiggsMassConstraint::getCovarianceMatrix(double (&momCov)[9], const pat::Jet* particle){
   for(int i=0;i<9;i++) momCov[i]=0.;
 
   double lambda = piovertwo_val - particle->theta();
@@ -1859,12 +1859,12 @@ void HMassConstraint::getCovarianceMatrix(double (&momCov)[9], const pat::Jet* p
   momCov[3*0+0] = C_p_p*pow(cos(lambda), 2);
 }
 
-void HMassConstraint::invertOneDimensional(Int_t includeIndex, double (&momCov)[9]){
+void HiggsMassConstraint::invertOneDimensional(Int_t includeIndex, double (&momCov)[9]){
   double momCov_tmp[9]={ 0 };
   if (momCov[3*includeIndex+includeIndex]!=0.) momCov_tmp[3*includeIndex+includeIndex] = 1./momCov[3*includeIndex+includeIndex];
   for (int ix=0; ix<3; ix++){ for (int iy=0; iy<3; iy++) momCov[3*ix+iy]=momCov_tmp[3*ix+iy]; }
 }
-void HMassConstraint::invertTwoDimensional(Int_t omitIndex, double (&momCov)[9]){
+void HiggsMassConstraint::invertTwoDimensional(Int_t omitIndex, double (&momCov)[9]){
   double momCov_tmp[9]={ 0 };
   double determinant = 0;
   if (omitIndex==0){
@@ -1895,7 +1895,7 @@ void HMassConstraint::invertTwoDimensional(Int_t omitIndex, double (&momCov)[9])
     }
   }
 }
-void HMassConstraint::invertThreeDimensional(double (&momCov)[9]){
+void HiggsMassConstraint::invertThreeDimensional(double (&momCov)[9]){
   double momCov_tmp[9]={ 0 };
   double determinant = 0.
     + (momCov[3*0+0]*momCov[3*1+1]*momCov[3*2+2])
@@ -1920,7 +1920,7 @@ void HMassConstraint::invertThreeDimensional(double (&momCov)[9]){
     }
   }
 }
-void HMassConstraint::strategicInvertCovarianceMatrix(Int_t useFullCov, Int_t fitpT, Int_t fitlambda, Int_t fitphi, double (&momCov)[9]){
+void HiggsMassConstraint::strategicInvertCovarianceMatrix(Int_t useFullCov, Int_t fitpT, Int_t fitlambda, Int_t fitphi, double (&momCov)[9]){
   // Make sure that te diagonal elements are set to 0 before further computation if useFullCov==0
   if (useFullCov==0){ for (int ix=0; ix<3; ix++){ for (int iy=0; iy<3; iy++){ if(ix!=iy) momCov[3*ix+iy]=0; } } }
   // Fit for only one of the observable types
@@ -1938,7 +1938,7 @@ void HMassConstraint::strategicInvertCovarianceMatrix(Int_t useFullCov, Int_t fi
   // Release all three variables
   else invertThreeDimensional(momCov);
 }
-void HMassConstraint::setInverseCovarianceMatrix(Int_t iZ, Int_t iferm, Int_t fsrindex, Double_t momCov[9]){
+void HiggsMassConstraint::setInverseCovarianceMatrix(Int_t iZ, Int_t iferm, Int_t fsrindex, Double_t momCov[9]){
   if (fsrindex==0){ for (int i=0; i<9; i++){ invcov_ferm[iZ][iferm][i]->setConstant(false); invcov_ferm[iZ][iferm][i]->setVal(momCov[i]); invcov_ferm[iZ][iferm][i]->setConstant(true); } }
   else{ for (int i=0; i<9; i++){ invcov_fsr[iZ][iferm][i]->setConstant(false); invcov_fsr[iZ][iferm][i]->setVal(momCov[i]); invcov_fsr[iZ][iferm][i]->setConstant(true); } }
 #if hmc_debug==1
@@ -1958,7 +1958,7 @@ void HMassConstraint::setInverseCovarianceMatrix(Int_t iZ, Int_t iferm, Int_t fs
 #endif
 }
 
-bool HMassConstraint::standardOrderedFinalCovarianceMatrix(const RooArgList& pars){
+bool HiggsMassConstraint::standardOrderedFinalCovarianceMatrix(const RooArgList& pars){
   const int nDims = 24;
   TMatrixDSym finalMatrix(nDims);
   for (int ix=0; ix<nDims; ix++){
@@ -1982,7 +1982,7 @@ bool HMassConstraint::standardOrderedFinalCovarianceMatrix(const RooArgList& par
   fitCovMatrix=finalMatrix;
 
 #if hmc_debug==1
-  cout << "HMassConstraint::standardOrderedFinalCovarianceMatrix: Final covariance matrix is:" << endl;
+  cout << "HiggsMassConstraint::standardOrderedFinalCovarianceMatrix: Final covariance matrix is:" << endl;
   for (int ix=0; ix<nDims; ix++){
     for (int iy=0; iy<nDims; iy++) cout << fitCovMatrix[ix][iy] << '\t';
     cout << endl;
@@ -1990,7 +1990,7 @@ bool HMassConstraint::standardOrderedFinalCovarianceMatrix(const RooArgList& par
 #endif
   return true;
 }
-Int_t HMassConstraint::fitParameterCorrespondance(RooRealVar* par){
+Int_t HiggsMassConstraint::fitParameterCorrespondance(RooRealVar* par){
   Int_t index=-1;
   for (int iZ=0; iZ<2; iZ++){
     for (int iferm=0; iferm<2; iferm++){
@@ -2003,12 +2003,12 @@ Int_t HMassConstraint::fitParameterCorrespondance(RooRealVar* par){
       if (index>=0) break;
     }
   }
-  if (index<0) cerr << "HMassConstraint::fitParameterCorrespondance: Parameter " << par->GetName() << " not found!" << endl;
+  if (index<0) cerr << "HiggsMassConstraint::fitParameterCorrespondance: Parameter " << par->GetName() << " not found!" << endl;
   return index;
 }
 
 
-Double_t HMassConstraint::d_Ek_d_pTk(Int_t kZ, Int_t kferm, Int_t fsrindex) const{
+Double_t HiggsMassConstraint::d_Ek_d_pTk(Int_t kZ, Int_t kferm, Int_t fsrindex) const{
   Double_t pt_over_E=0;
   Double_t lambda=0;
   Double_t mass=0;
@@ -2032,7 +2032,7 @@ Double_t HMassConstraint::d_Ek_d_pTk(Int_t kZ, Int_t kferm, Int_t fsrindex) cons
 
   return (pt_over_E/pow(cos(lambda), 2));
 }
-Double_t HMassConstraint::d_pjk_d_pTk(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const{
+Double_t HiggsMassConstraint::d_pjk_d_pTk(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const{
   Double_t lambda=0;
   Double_t phi=0;
   if (fsrindex==0){
@@ -2048,14 +2048,14 @@ Double_t HMassConstraint::d_pjk_d_pTk(Int_t kZ, Int_t kferm, Int_t fsrindex, Int
   else if (j==1) return sin(phi);
   else return tan(lambda);
 }
-Double_t HMassConstraint::d_Ek_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrindex) const{
+Double_t HiggsMassConstraint::d_Ek_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrindex) const{
   Double_t pz=0;
   if (fsrindex==0) pz = pz_ferm[kZ][kferm]->getVal();
   else pz = pz_fsr[kZ][kferm]->getVal();
 
   return (pz*d_Ek_d_pTk(kZ, kferm, fsrindex));
 }
-Double_t HMassConstraint::d_pjk_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const{
+Double_t HiggsMassConstraint::d_pjk_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const{
   if (j!=2) return 0.;
   Double_t pT=0;
   Double_t lambda=0;
@@ -2069,8 +2069,8 @@ Double_t HMassConstraint::d_pjk_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrindex,
   }
   return (pT/pow(cos(lambda), 2));
 }
-Double_t HMassConstraint::d_Ek_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex) const{ return 0.; }
-Double_t HMassConstraint::d_pjk_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const{
+Double_t HiggsMassConstraint::d_Ek_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex) const{ return 0.; }
+Double_t HiggsMassConstraint::d_pjk_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const{
   if (j>=2) return 0.;
   Double_t pT=0;
   Double_t phi=0;
@@ -2086,7 +2086,7 @@ Double_t HMassConstraint::d_pjk_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex, In
   else return (pT*cos(phi));
 }
 
-Double_t HMassConstraint::d_m123_d_pTk(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const{
+Double_t HiggsMassConstraint::d_m123_d_pTk(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const{
   if((imass<2 && kZ!=imass) || imass<0 || imass>2) return 0;
 
   Double_t mass=m[imass]->getVal();
@@ -2113,7 +2113,7 @@ Double_t HMassConstraint::d_m123_d_pTk(Int_t imass, Int_t kZ, Int_t kferm, Int_t
   }
   return value;
 }
-Double_t HMassConstraint::d_m123_d_lambdak(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const{
+Double_t HiggsMassConstraint::d_m123_d_lambdak(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const{
   if((imass<2 && kZ!=imass) || imass<0 || imass>2) return 0;
 
   Double_t mass=m[imass]->getVal();;
@@ -2140,7 +2140,7 @@ Double_t HMassConstraint::d_m123_d_lambdak(Int_t imass, Int_t kZ, Int_t kferm, I
   }
   return value;
 }
-Double_t HMassConstraint::d_m123_d_phik(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const{
+Double_t HiggsMassConstraint::d_m123_d_phik(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const{
   if((imass<2 && kZ!=imass) || imass<0 || imass>2) return 0;
 
   Double_t mass=m[imass]->getVal();;
@@ -2168,7 +2168,7 @@ Double_t HMassConstraint::d_m123_d_phik(Int_t imass, Int_t kZ, Int_t kferm, Int_
   return value;
 }
 
-Double_t HMassConstraint::getRefittedMassError(Int_t imass) const{ // imass==0 is m1, imass==1 is m2, imass==2 is m12.
+Double_t HiggsMassConstraint::getRefittedMassError(Int_t imass) const{ // imass==0 is m1, imass==1 is m2, imass==2 is m12.
   Double_t value = 0;
   const Int_t NColCovMat=24;
   if(fitCovMatrix.GetNcols()!=NColCovMat) return value; // This means the fit was not run.
@@ -2204,11 +2204,11 @@ Double_t HMassConstraint::getRefittedMassError(Int_t imass) const{ // imass==0 i
   value = sqrt(value);
   return value;
 }
-Double_t HMassConstraint::getRefittedMass(Int_t imass) const{
+Double_t HiggsMassConstraint::getRefittedMass(Int_t imass) const{
   if(imass>2) return 0;
   return m[imass]->getVal();
 }
-TLorentzVector HMassConstraint::getRefittedMomentum(Int_t iZ, Int_t iferm, Int_t fsrindex) const{
+TLorentzVector HiggsMassConstraint::getRefittedMomentum(Int_t iZ, Int_t iferm, Int_t fsrindex) const{
   TLorentzVector result;
   if(fsrindex==0) result.SetXYZT(px_ferm[iZ][iferm]->getVal(),py_ferm[iZ][iferm]->getVal(),pz_ferm[iZ][iferm]->getVal(),E_ferm[iZ][iferm]->getVal());
   else result.SetXYZT(px_fsr[iZ][iferm]->getVal(),py_fsr[iZ][iferm]->getVal(),pz_fsr[iZ][iferm]->getVal(),E_fsr[iZ][iferm]->getVal());

@@ -1,5 +1,5 @@
-#include <HMassConstraint/HMassConstraint/include/RooGaussianMomConstraint.h>
 #include <cassert> 
+#include "RooGaussianMomConstraint.h"
 
 using namespace TMath;
 using namespace std;

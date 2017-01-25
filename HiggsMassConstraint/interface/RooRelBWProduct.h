@@ -1,11 +1,7 @@
 #ifndef ROORELBWPRODUCT_H
 #define ROORELBWPRODUCT_H
 
-#ifdef _def_melatools_
 #include <ZZMatrixElement/MELA/interface/RooSpin.h>
-#else
-#include "RooSpin.h"
-#endif
 
 
 class RooRelBWProduct : public RooSpin {

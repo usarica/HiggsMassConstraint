@@ -32,6 +32,7 @@
 <use name="Geometry/Records"/>
 <use name="RecoEcal/EgammaCoreTools"/>
 <use name="PhysicsTools/SelectorUtils"/>
+<use name="ZZMatrixElement/MELA"/>
 
 <use name="root"/>
 <use name="rootmath"/>
@@ -39,8 +40,8 @@
 <use name="roostats"/>
 <use name="histfactory"/>
 
-<Flags CPPFLAGS="-Wno-error=unused-variable" />
-<Flags CFLAGS="-Wno-error=unused-variable" />
+<Flags CPPFLAGS="-Wno-error=unused-variable -I$(CMSSW_BASE)/src/HiggsMassConstraint/HiggsMassConstraint/interface/" />
+<Flags CFLAGS="-Wno-error=unused-variable -I$(CMSSW_BASE)/src/HiggsMassConstraint/HiggsMassConstraint/interface/" />
 
 <export>
     <lib   name="1"/>

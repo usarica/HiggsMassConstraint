@@ -1,5 +1,5 @@
-#ifndef HMassConstraint_H
-#define HMassConstraint_H
+#ifndef HiggsMassConstraint_H
+#define HiggsMassConstraint_H
 
 #include <iostream>
 #include <cstdlib>
@@ -23,11 +23,10 @@
 #include "RooGenericPdf.h"
 #include "RooFitResult.h"
 
-#include <HMassConstraint/HMassConstraint/include/ScalarPdfFactory_ggH.h>
-#include <HMassConstraint/HMassConstraint/include/TensorPdfFactory_HVV.h>
-#include <HMassConstraint/HMassConstraint/include/RooRelBWProduct.h>
-#include <HMassConstraint/HMassConstraint/include/RooGaussianMomConstraint.h>
-#include <HMassConstraint/HMassConstraint/include/RooDiracDeltaFunction.h>
+#include <ZZMatrixElement/MELA/interface/Mela.h>
+#include "RooRelBWProduct.h"
+#include "RooGaussianMomConstraint.h"
+#include "RooDiracDeltaFunction.h"
 
 #include <DataFormats/TrackReco/interface/TrackBase.h>
 #include <DataFormats/TrackReco/interface/Track.h>
@@ -72,7 +71,7 @@ namespace HMCtoolkit{
 }
 
 
-class HMassConstraint {
+class HiggsMassConstraint {
 public:
 
   enum FitMomentumStrategy{
@@ -130,7 +129,7 @@ public:
   };
 
   // Member functions
-  HMassConstraint(
+  HiggsMassConstraint(
     const Double_t sqrts_, // 7, 8, 13, 14 etc. in units of TeV
     // See RooSpin.h for what enumerators are available:
     RooSpin::VdecayType Vdecay1_,
@@ -139,7 +138,7 @@ public:
     // Do not touch the arguments below at the moment
     const Int_t intCodeStart_=RooSpin::prime_h1*RooSpin::prime_h2*RooSpin::prime_Phi*RooSpin::prime_hs*RooSpin::prime_Phi1
     );
-  virtual ~HMassConstraint();
+  virtual ~HiggsMassConstraint();
 
   void setJECUserFloatString(TString jecString_="jec_unc"){ jecString=jecString_; }
   void setMuonKalmanCorrectedPtErrorString(TString kalmanMuPtString_="correctedPtError"){ kalmanMuPtString=kalmanMuPtString_; }
@@ -166,9 +165,9 @@ public:
   void setFastPDF(bool useFastPDF_=false);
 
   // Make sure each strategy is implemented correctly. Affects the behavior of covariance matrix extractions in addDaughters.
-  void setFitMomentumStrategy(HMassConstraint::FitMomentumStrategy fitMomStrategy_=HMassConstraint::/*FullCov_All_pTLambdaPhi*/CovDiagonals_All_pT);
-  void setFitVVStrategy(HMassConstraint::FitVVStrategy fitVVStrategy_=HMassConstraint::Fit_All_V1V2);
-  HMassConstraint::FitMomentumStrategy getFitMomentumStrategy();
+  void setFitMomentumStrategy(HiggsMassConstraint::FitMomentumStrategy fitMomStrategy_=HiggsMassConstraint::/*FullCov_All_pTLambdaPhi*/CovDiagonals_All_pT);
+  void setFitVVStrategy(HiggsMassConstraint::FitVVStrategy fitVVStrategy_=HiggsMassConstraint::Fit_All_V1V2);
+  HiggsMassConstraint::FitMomentumStrategy getFitMomentumStrategy();
 
   // Do the fit for the fermion-FSR pairs, FSR-being per-fermion.
   void fitTo(std::vector<pair<const reco::Candidate*, const pat::PFParticle*>>& FermionWithFSR);
@@ -193,10 +192,10 @@ protected:
   TString kalmanMuPtString;
   bool useFastPDF;
 
-  HMassConstraint::FitMomentumStrategy fitMomStrategy;
-  HMassConstraint::FitMomentumStrategy fitMomStrategy_final;
+  HiggsMassConstraint::FitMomentumStrategy fitMomStrategy;
+  HiggsMassConstraint::FitMomentumStrategy fitMomStrategy_final;
 
-  HMassConstraint::FitVVStrategy fitVVStrategy; // There is no "final" counterpart to this one. Decrementation or incrementation is not allowed due to physics interest/reasons!
+  HiggsMassConstraint::FitVVStrategy fitVVStrategy; // There is no "final" counterpart to this one. Decrementation or incrementation is not allowed due to physics interest/reasons!
 
   Double_t pTcut_muon;
   Double_t lambdacut_muon;
@@ -329,10 +328,10 @@ protected:
   void fit();
 
   // Momentum strategy functions
-  void setWorkingFitMomentumStrategy(HMassConstraint::FitMomentumStrategy fitMomStrategy_);
+  void setWorkingFitMomentumStrategy(HiggsMassConstraint::FitMomentumStrategy fitMomStrategy_);
   void testFitMomentumStrategy(Int_t& useFullCov, Int_t& FermFSRType, Int_t& fitpT, Int_t& fitlambda, Int_t& fitphi) const;
-  void decrementMomentumStrategy(HMassConstraint::FitMomentumStrategy& strategy_);
-  void incrementMomentumStrategy(HMassConstraint::FitMomentumStrategy& strategy_);
+  void decrementMomentumStrategy(HiggsMassConstraint::FitMomentumStrategy& strategy_);
+  void incrementMomentumStrategy(HiggsMassConstraint::FitMomentumStrategy& strategy_);
   // VV strategy functions
   void testFitVVStrategy(Int_t& fitV1, Int_t& fitV2) const;
 

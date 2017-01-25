@@ -1,8 +1,4 @@
-#ifdef _def_melatools_
-#include <ZZMatrixElement/MELA/interface/RooRelBWProduct.h>
-#else
-#include "../include/RooRelBWProduct.h"
-#endif
+#include "RooRelBWProduct.h"
 
 
 RooRelBWProduct::RooRelBWProduct(
