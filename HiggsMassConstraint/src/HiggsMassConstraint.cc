@@ -49,8 +49,8 @@ HiggsMassConstraint::HiggsMassConstraint(
 
   setFitMomentumStrategy(); // Set default momentum strategy
   setFitVVStrategy(); // Set default VV strategy
-  setJECUserFloatString(); // Set JEC uncertainty default string
-  setMuonKalmanCorrectedPtErrorString(); // Set string to obtain a userFloat for the corrected pT error on muons after Kalman fit (+ smearing in MC)
+  setJECUserFloatString(""); // Set JEC uncertainty default string
+  setMuonKalmanCorrectedPtErrorString(""); // Set string to obtain a userFloat for the corrected pT error on muons after Kalman fit (+ smearing in MC)
 
   setPtEtaCuts(); // Set default cuts on pT, eta and phi of leptons, jets and FSR. Note the the cut targets are numbers!
   constructVariables();
@@ -91,7 +91,7 @@ void HiggsMassConstraint::constructVariables(){
       pT_ferm[iZ][iferm] = new RooRealVar(Form("pTRefit_Z%iFermion%i", iZ+1, iferm+1), "", 0., 0., sqrts);
       lambda_ferm[iZ][iferm] = new RooRealVar(Form("lambdaRefit_Z%iFermion%i", iZ+1, iferm+1), "", -piovertwo_val, piovertwo_val);
       phi_ferm[iZ][iferm] = new RooRealVar(Form("phiRefit_Z%iFermion%i", iZ+1, iferm+1), "", -pi_val, pi_val);
-      massbar_ferm[iZ][iferm] = new RooRealVar(Form("mass_Z%iFermion%i", iZ+1, iferm+1), "", 0., -sqrts, sqrts);
+      massbar_ferm[iZ][iferm] = new RooRealVar(Form("massInit_Z%iFermion%i", iZ+1, iferm+1), "", 0., -sqrts, sqrts);
       pTbar_ferm[iZ][iferm] = new RooRealVar(Form("pTInit_Z%iFermion%i", iZ+1, iferm+1), "", 0., 0., sqrts);
       lambdabar_ferm[iZ][iferm] = new RooRealVar(Form("lambdaInit_Z%iFermion%i", iZ+1, iferm+1), "", -piovertwo_val, piovertwo_val);
       phibar_ferm[iZ][iferm] = new RooRealVar(Form("phiInit_Z%iFermion%i", iZ+1, iferm+1), "", -pi_val, pi_val);
@@ -267,14 +267,16 @@ void HiggsMassConstraint::constructPdfFactory(){
   hvvFactory=0;
   xvvFactory=0;
   if (X_spin==0){
-    hvvFactory = new ScalarPdfFactory_ggH(measurables, false, Vdecay1, Vdecay2, true); // First false for acceptance, then true for always-on-shell H
+    hvvFactory = new ScalarPdfFactory_HVV(measurables, false, Vdecay1, Vdecay2, true); // First false for acceptance, then true for always-on-shell H
     hvvFactory->makeParamsConst(false); // So that we can play with couplings
+    hvvFactory->setZZ4fOrdering(false); // Disable m1/m2 ordering
     spinPDF = hvvFactory->getPDF();
     pdfFactory = hvvFactory;
   }
   else if (X_spin==2){
-    xvvFactory = new TensorPdfFactory_HVV(measurables, Vdecay1, Vdecay2, true); // true for always-on-shell X
+    xvvFactory = new TensorPdfFactory_ppHVV(measurables, Vdecay1, Vdecay2, true); // true for always-on-shell X
     xvvFactory->makeParamsConst(false); // So that we can play with couplings
+    xvvFactory->setZZ4fOrdering(false); // Disable m1/m2 ordering
     spinPDF = xvvFactory->getPDF();
     pdfFactory = xvvFactory;
   }
@@ -287,10 +289,16 @@ void HiggsMassConstraint::constructPdfFactory(){
     Vdecay1, Vdecay2
     );
 
-  simpleBWPDF = new RooGenericPdf(
-    "SimpleBreitWignerPDF", "1/( pow(pow(@0, 2)-pow(@1, 2), 2)+pow(@1*@2, 2) )",
+  RooGenericPdf* simpleBWPDF1 = new RooGenericPdf(
+    "SimpleBreitWignerPDF1", "2*@0/( pow(pow(@0, 2)-pow(@1, 2), 2)+pow(@1*@2, 2) )",
     RooArgSet(*(pdfFactory->measurables.m1), *(pdfFactory->parameters.mZ), *(pdfFactory->parameters.gamZ))
     );
+  RooGenericPdf* simpleBWPDF2 = new RooGenericPdf(
+    "SimpleBreitWignerPDF2", "2*@0/( pow(pow(@0, 2)-pow(@1, 2), 2)+pow(@1*@2, 2) )",
+    RooArgSet(*(pdfFactory->measurables.m2), *(pdfFactory->parameters.mZ), *(pdfFactory->parameters.gamZ))
+    );
+  simpleBWPDF.push_back(simpleBWPDF1);
+  simpleBWPDF.push_back(simpleBWPDF2);
 
 #if hmc_debug==1
   cout << "spinPDF: " << endl;
@@ -317,15 +325,17 @@ void HiggsMassConstraint::constructPdfFactory(){
   delete pdfPars;
 
   cout << "SimpleBWPDF: " << endl;
-  simpleBWPDF->Print("v");
-  pdfPars = simpleBWPDF->getParameters((RooArgSet*)0, true);
-  parIter = pdfPars->createIterator();
-  while ((thePar = (RooAbsArg*)parIter->Next())){
-    cout << thePar->GetName() << endl;
+  for (unsigned int ip=0; ip<simpleBWPDF.size(); ip++){
+    simpleBWPDF.at(ip)->Print("v");
+    pdfPars = simpleBWPDF.at(ip)->getParameters((RooArgSet*)0, true);
+    parIter = pdfPars->createIterator();
+    while ((thePar = (RooAbsArg*)parIter->Next())){
+      cout << thePar->GetName() << endl;
+    }
+    cout << endl;
+    delete parIter;
+    delete pdfPars;
   }
-  cout << endl;
-  delete parIter;
-  delete pdfPars;
 #endif
 }
 void HiggsMassConstraint::constructConstraintPdfs(){
@@ -370,7 +380,6 @@ void HiggsMassConstraint::constructConstraintPdfs(){
       gausConstraintsPDF[iZ][iferm][0] = new RooGaussianMomConstraint(Form("gausConstraintsPDF_Z%iFermion%i", iZ+1, iferm+1), Form("gausConstraintsPDF_Z%iFermion%i", iZ+1, iferm+1), vars_ferm, means_ferm, me_ferm, RooGaussianMomConstraint::kRhoLambdaPhi);
       //gausConstraintsPDF[iZ][iferm][0] = new RooGaussian(Form("gausConstraintsPDF_Z%iFermion%i", iZ+1, iferm+1), Form("gausConstraintsPDF_Z%iFermion%i", iZ+1, iferm+1), *(pT_ferm[iZ][iferm]), *(pTobs_ferm[iZ][iferm]), *(invcov_ferm[iZ][iferm][0]));
       constraints.add(*(gausConstraintsPDF[iZ][iferm][0]));
-      //if (iZ==0){ constraints.add(*(gausConstraintsPDF[iZ][iferm][0])); gausConstraintsPDF[iZ][iferm][0]->Print("v"); }
 
       RooArgList vars_fsr, means_fsr, me_fsr;
       vars_fsr.add(*(pT_fsr[iZ][iferm]));
@@ -402,7 +411,7 @@ void HiggsMassConstraint::constructConstraintPdfs(){
   massCuts = new RooFormulaVar("mABCutParameterization", "( (@0>=@2 && @1>=@2  &&  @3>=@5 && @4>=@5  &&  @6>=@7 && @6<=@8  &&  @9>=@10 && @9<=@11) ? 1. : 1.e-15)", massCuts_args);
   auxilliaryConstraintsPDF = new RooGenericPdf("auxilliaryConstraintsPDF", "@0*@1*@2", RooArgList(*(beta_Vdaughter[0]), *(beta_Vdaughter[1]), *massCuts));
 
-  constraints.add(*(auxilliaryConstraintsPDF));
+  //constraints.add(*(auxilliaryConstraintsPDF));
   //constraints.add(*(DiracDeltaPDF));
   constraintsPDF = new RooProdPdf("constraintsPDF", "constraintsPDF", constraints);
 }
@@ -411,15 +420,16 @@ void HiggsMassConstraint::constructCompoundPdf(){
   RooArgList pdfList(*spinPDF, *constraintsPDF);
   PDF = new RooProdPdf("HiggsMassConstraint_PDF", "HiggsMassConstraint_PDF", pdfList);
 
-  RooArgList fastpdfList(*bwProdPDF, *constraintsPDF);
+  RooArgList fastpdfList(*constraintsPDF);
+  for (unsigned int ip=0; ip<simpleBWPDF.size(); ip++) fastpdfList.add(*(simpleBWPDF.at(ip)));
+  //fastpdfList.add(*bwProdPDF);
   fastPDF = new RooProdPdf("HiggsMassConstraint_FastPDF", "HiggsMassConstraint_FastPDF", fastpdfList);
 }
 
 void HiggsMassConstraint::destroyVariables(){
-  // Destroy the fit result, the ultimate culmination of all evil!
   deletePtr(fitResult);
 
-  // Destroy in ~reverse order of creation
+  // Destroy in reverse order of creation
   deletePtr(h1);
   deletePtr(h2);
   deletePtr(hs);
@@ -506,7 +516,7 @@ void HiggsMassConstraint::destroyDeltaFunctions(){
 }
 void HiggsMassConstraint::destroyPdfFactory(){
   // Delete the bwProdPDF and simpleBWPDF first since the measurables and parameters come from the pdfFactory
-  deletePtr(simpleBWPDF);
+  for (unsigned int ip=0; ip<simpleBWPDF.size(); ip++) deletePtr(simpleBWPDF.at(ip));
   deletePtr(bwProdPDF);
 
   // Only one of these is true; no need to delete pdfFactory since it is simply a mother-pointer to either of these.

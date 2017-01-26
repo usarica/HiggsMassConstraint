@@ -45,7 +45,7 @@
 
 
 #ifndef hmc_debug
-#define hmc_debug 0
+#define hmc_debug 1
 #endif
 
 
@@ -140,8 +140,8 @@ public:
     );
   virtual ~HiggsMassConstraint();
 
-  void setJECUserFloatString(TString jecString_="jec_unc"){ jecString=jecString_; }
-  void setMuonKalmanCorrectedPtErrorString(TString kalmanMuPtString_="correctedPtError"){ kalmanMuPtString=kalmanMuPtString_; }
+  void setJECUserFloatString(TString jecString_){ jecString=jecString_; }
+  void setMuonKalmanCorrectedPtErrorString(TString kalmanMuPtString_){ kalmanMuPtString=kalmanMuPtString_; }
   void setPtEtaCuts(
     Double_t pTcut_muon_=5.,
     Double_t etacut_muon_=2.4,
@@ -195,7 +195,7 @@ protected:
   HiggsMassConstraint::FitMomentumStrategy fitMomStrategy;
   HiggsMassConstraint::FitMomentumStrategy fitMomStrategy_final;
 
-  HiggsMassConstraint::FitVVStrategy fitVVStrategy; // There is no "final" counterpart to this one. Decrementation or incrementation is not allowed due to physics interest/reasons!
+  HiggsMassConstraint::FitVVStrategy fitVVStrategy;
 
   Double_t pTcut_muon;
   Double_t lambdacut_muon;
@@ -215,8 +215,10 @@ protected:
   RooRealVar* varZero;
   RooRealVar* varOne;
 
+  // Below, lambda = Pi/2 - theta
+
   RooRealVar* pT_ferm[2][2];
-  RooRealVar* lambda_ferm[2][2]; // lambda = Pi/2 - theta
+  RooRealVar* lambda_ferm[2][2];
   RooRealVar* phi_ferm[2][2];
 
   Int_t pdgid_ferm[2][2];
@@ -283,13 +285,13 @@ protected:
   RooProdPdf* DiracDeltaPDF;
   // J^CP PDFs
   SpinPdfFactory* pdfFactory;
-  ScalarPdfFactory_ggH* hvvFactory;
-  TensorPdfFactory_HVV* xvvFactory;
+  ScalarPdfFactory_HVV* hvvFactory;
+  TensorPdfFactory_ppHVV* xvvFactory;
   RooSpin* spinPDF;
   // Fast propagator PDF
   RooRelBWProduct* bwProdPDF; // For fast PDF
   // Simplest PDF possible
-  RooGenericPdf* simpleBWPDF;
+  std::vector<RooGenericPdf*> simpleBWPDF;
   // PDF of constraintson {pT, lambda, phi}_i of fermion i
   RooGaussianMomConstraint* gausConstraintsPDF[2][2][2];
   //RooGaussian* gausConstraintsPDF[2][2][2];

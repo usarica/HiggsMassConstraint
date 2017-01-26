@@ -20,7 +20,7 @@ public:
   inline virtual ~RooRelBWProduct(){}
 
   Int_t getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* rangeName=0) const { return 0; }
-  Double_t analyticalIntegral(Int_t code, const char* rangeName=0) const { return 1.; }
+  Double_t analyticalIntegral(Int_t code, const char* rangeName=0) const { return 0.; }
 
 protected:
 
