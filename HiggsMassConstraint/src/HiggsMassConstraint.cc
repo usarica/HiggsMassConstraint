@@ -265,13 +265,28 @@ void HiggsMassConstraint::constructDeltaFunctions(){
 }
 void HiggsMassConstraint::constructPdfFactory(){
   hvvFactory=0;
+  hvvFastFactory=0;
   xvvFactory=0;
   if (X_spin==0){
     hvvFactory = new ScalarPdfFactory_HVV(measurables, false, Vdecay1, Vdecay2, true); // First false for acceptance, then true for always-on-shell H
     hvvFactory->makeParamsConst(false); // So that we can play with couplings
     hvvFactory->setZZ4fOrdering(false); // Disable m1/m2 ordering
-    spinPDF = hvvFactory->getPDF();
-    pdfFactory = hvvFactory;
+    //spinPDF = hvvFactory->getPDF();
+    //pdfFactory = hvvFactory;
+
+#ifdef _hmcpkgpathstr_
+    const string HMCPKGPATH = _hmcpkgpathstr_;
+    setFastIntegrationGraph(Form("%s/data/HZZ4lDecay_mHstarShape_NoInterf_ghz1.root", HMCPKGPATH.c_str()), "tg_pdf_mH");
+#else
+    cout << "HiggsMassConstraint::constructPdfFactory: Package path is undefined! Please modify BuildFile.xml." << endl;
+    assert(0);
+#endif
+    hvvFastFactory = new ScalarPdfFactory_HVV_fast(measurables, false, Vdecay1, Vdecay2, true); // First false for acceptance, then true for always-on-shell H
+    hvvFastFactory->makeParamsConst(false); // So that we can play with couplings
+    hvvFastFactory->setZZ4fOrdering(false); // Disable m1/m2 ordering
+    hvvFastFactory->setFastPDFOverallIntegration(tgint);
+    spinPDF = hvvFastFactory->getPDF();
+    pdfFactory = hvvFastFactory;
   }
   else if (X_spin==2){
     xvvFactory = new TensorPdfFactory_ppHVV(measurables, Vdecay1, Vdecay2, true); // true for always-on-shell X
@@ -521,6 +536,7 @@ void HiggsMassConstraint::destroyPdfFactory(){
 
   // Only one of these is true; no need to delete pdfFactory since it is simply a mother-pointer to either of these.
   pdfFactory=0;
+  deletePtr(hvvFastFactory); deletePtr(tgint);
   deletePtr(hvvFactory);
   deletePtr(xvvFactory);
 }
@@ -591,6 +607,11 @@ void HiggsMassConstraint::setM1M2Cuts(
   m2highcut->setConstant(true);
   mFFOScut->setConstant(true);
   mFFSScut->setConstant(true);
+}
+void HiggsMassConstraint::setFastIntegrationGraph(TString strfname, TString strtgname){
+  TFile* fin = TFile::Open(strfname, "read");
+  tgint = (TGraph*)fin->Get(strtgname);
+  fin->Close();
 }
 
 

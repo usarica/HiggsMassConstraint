@@ -24,6 +24,7 @@
 #include "RooFitResult.h"
 
 #include <ZZMatrixElement/MELA/interface/Mela.h>
+#include "ScalarPdfFactory_HVV_fast.h"
 #include "RooRelBWProduct.h"
 #include "RooGaussianMomConstraint.h"
 #include "RooDiracDeltaFunction.h"
@@ -47,6 +48,11 @@
 #ifndef hmc_debug
 #define hmc_debug 1
 #endif
+// xstr_lit is defined in TVar.hh
+#ifndef _hmcpkgpath_
+#define _hmcpkgpath_ ./
+#endif
+#define _hmcpkgpathstr_ xstr_lit(_hmcpkgpath_)
 
 
 namespace HMCtoolkit{
@@ -179,6 +185,8 @@ public:
   Double_t getRefittedMass(Int_t imass) const;
   TLorentzVector getRefittedMomentum(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
 
+  // Get the integration graph
+  void setFastIntegrationGraph(TString strfname, TString strtgname);
 
 protected:
 
@@ -283,9 +291,14 @@ protected:
   RooDiracDeltaFunction* lambdaDeltaFcn_fsr[2][2];
   RooDiracDeltaFunction* phiDeltaFcn_fsr[2][2];
   RooProdPdf* DiracDeltaPDF;
+
+  // Integration graph
+  TGraph* tgint;
+
   // J^CP PDFs
   SpinPdfFactory* pdfFactory;
   ScalarPdfFactory_HVV* hvvFactory;
+  ScalarPdfFactory_HVV_fast* hvvFastFactory;
   TensorPdfFactory_ppHVV* xvvFactory;
   RooSpin* spinPDF;
   // Fast propagator PDF
@@ -336,7 +349,6 @@ protected:
   void incrementMomentumStrategy(HiggsMassConstraint::FitMomentumStrategy& strategy_);
   // VV strategy functions
   void testFitVVStrategy(Int_t& fitV1, Int_t& fitV2) const;
-
 
   // Overloaded functions to compute input block-diagonal C(pT, lambda, phi)
   void sortGetCovarianceMatrix(double (&momCov)[9], const reco::Candidate* particle);

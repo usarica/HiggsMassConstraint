@@ -43,6 +43,8 @@
 <Flags CPPFLAGS="-Wno-error=unused-variable -I$(CMSSW_BASE)/src/HiggsMassConstraint/HiggsMassConstraint/interface/" />
 <Flags CFLAGS="-Wno-error=unused-variable -I$(CMSSW_BASE)/src/HiggsMassConstraint/HiggsMassConstraint/interface/" />
 
+<Flags CPPDEFINES="_hmcpkgpath_=$(CMSSW_BASE)/src/HiggsMassConstraint/HiggsMassConstraint/" />
+
 <export>
     <lib   name="1"/>
 </export>
