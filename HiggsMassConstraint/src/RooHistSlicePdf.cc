@@ -26,8 +26,8 @@ smoothRegion(1.)
 {}
 
 RooHistSlicePdf::RooHistSlicePdf(
-const char *name,
-const char *title,
+const char* name,
+const char* title,
 RooAbsReal& inSliceVar,
 const RooArgList& inDepList,
 const RooArgList& inFuncList,
@@ -214,3 +214,5 @@ Double_t RooHistSlicePdf::analyticalIntegral(Int_t code, const char* rangeName) 
     assert(0);
   }
 }
+
+ClassImp(RooHistSlicePdf)

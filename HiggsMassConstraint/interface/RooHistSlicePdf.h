@@ -35,8 +35,8 @@ protected:
 public:
   RooHistSlicePdf();
 	RooHistSlicePdf(
-		const char *name,
-		const char *title,
+		const char* name,
+		const char* title,
 		RooAbsReal& inSliceVar,
     const RooArgList& inDepList,
     const RooArgList& inFuncList,
@@ -61,6 +61,8 @@ protected:
   virtual Double_t interpolateBin(Bool_t doIntegrate) const;
   virtual Double_t interpolateVariation(Double_t theta, Double_t valueCenter, Double_t valueHigh, Double_t valueLow) const;
 
+private:
+  ClassDef(RooHistSlicePdf, 1)
 };
  
 #endif

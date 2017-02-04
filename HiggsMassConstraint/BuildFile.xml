@@ -18,7 +18,6 @@
 <use name="PhysicsTools/PatUtils"/>
 <use name="PhysicsTools/UtilAlgos"/>
 <use name="PhysicsTools/Utilities"/>
-<use name="SimDataFormats/PileupSummaryInfo"/>
 <use name="EgammaAnalysis/ElectronTools"/>
 <use name="RecoParticleFlow/PFClusterTools"/>
 <use name="TrackingTools/IPTools"/>
@@ -26,10 +25,6 @@
 <use name="TrackingTools/Records"/>
 <use name="RecoVertex/GaussianSumVertexFit"/>
 <use name="PhysicsTools/IsolationAlgos"/>
-<use name="SimTracker/Records"/>
-<use name="SimTracker/TrackAssociation"/>
-<use name="Geometry/CaloTopology"/>
-<use name="Geometry/Records"/>
 <use name="RecoEcal/EgammaCoreTools"/>
 <use name="PhysicsTools/SelectorUtils"/>
 <use name="ZZMatrixElement/MELA"/>
@@ -39,12 +34,14 @@
 <use name="roofit"/>
 <use name="roostats"/>
 <use name="histfactory"/>
+<use name="libxml2"/>
+<use name="vdt"/>
 
-<Flags CPPFLAGS="-Wno-error=unused-variable -I$(CMSSW_BASE)/src/HiggsMassConstraint/HiggsMassConstraint/interface/" />
-<Flags CFLAGS="-Wno-error=unused-variable -I$(CMSSW_BASE)/src/HiggsMassConstraint/HiggsMassConstraint/interface/" />
+<Flags CPPFLAGS="-I$(CMSSW_BASE)/src/HiggsMassConstraint/HiggsMassConstraint/interface/" />
+<Flags CFLAGS="-I$(CMSSW_BASE)/src/HiggsMassConstraint/HiggsMassConstraint/interface/" />
 
 <Flags CPPDEFINES="_hmcpkgpath_=$(CMSSW_BASE)/src/HiggsMassConstraint/HiggsMassConstraint/" />
 
 <export>
-    <lib   name="1"/>
+    <lib name="1"/>
 </export>

@@ -25,8 +25,8 @@ protected:
 public:
   RooNCSplinePdf();
   RooNCSplinePdf(
-    const char *name,
-    const char *title,
+    const char* name,
+    const char* title,
     RooAbsReal& inVar,
     const RooArgList& inXList,
     const RooArgList& inYList
@@ -43,11 +43,13 @@ protected:
   virtual Double_t getTVar(const std::vector<Double_t>& kappas, const Double_t& xval, const Int_t& bin)const;
   virtual std::vector<Double_t> getCoefficients(const TVectorD& S, const std::vector<Double_t>& kappas, const Int_t& bin)const;
 
-  virtual Double_t interpolateFcn(Bool_t doIntegrate, const char* rangeName=0)const;
+  virtual Double_t interpolateFcn(Int_t code, const char* rangeName=0)const;
   virtual Double_t evaluate()const;
   virtual Int_t getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* rangeName=0) const;
   virtual Double_t analyticalIntegral(Int_t code, const char* rangeName=0)const;
 
+private:
+  ClassDef(RooNCSplinePdf, 1)
 };
  
 #endif

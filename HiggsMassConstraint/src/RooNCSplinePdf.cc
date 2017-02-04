@@ -24,8 +24,8 @@ npoints(0)
 {}
 
 RooNCSplinePdf::RooNCSplinePdf(
-const char *name,
-const char *title,
+const char* name,
+const char* title,
 RooAbsReal& inVar,
 const RooArgList& inXList,
 const RooArgList& inYList
@@ -39,7 +39,7 @@ YList("YList", "List of Y coordinates", this)
   RooAbsArg* coef;
   while ((coef = (RooAbsArg*)coefIter->Next())){
     if (!dynamic_cast<RooAbsReal*>(coef)){
-      coutE(InputArguments) << "RooNCSplinePdf ERROR::RooNCSplinePdf(" << GetName() << ") coefficient " << coef->GetName() << " is not of type RooAbsReal" << endl;
+      coutE(InputArguments) << "RooNCSplinePdf ERROR::RooNCSplinePdf(" << GetName() << ") X variable " << coef->GetName() << " is not of type RooAbsReal" << endl;
       assert(0);
     }
     XList.add(*coef);
@@ -49,7 +49,7 @@ YList("YList", "List of Y coordinates", this)
   coefIter = inYList.createIterator();
   while ((coef = (RooAbsArg*)coefIter->Next())){
     if (!dynamic_cast<RooAbsReal*>(coef)){
-      coutE(InputArguments) << "RooNCSplinePdf ERROR::RooNCSplinePdf(" << GetName() << ") coefficient " << coef->GetName() << " is not of type RooAbsReal" << endl;
+      coutE(InputArguments) << "RooNCSplinePdf ERROR::RooNCSplinePdf(" << GetName() << ") Y variable " << coef->GetName() << " is not of type RooAbsReal" << endl;
       assert(0);
     }
     YList.add(*coef);
@@ -81,7 +81,7 @@ RooNCSplinePdf::RooNCSplinePdf(
   npoints(other.npoints)
 {}
 
-Double_t RooNCSplinePdf::interpolateFcn(Bool_t doIntegrate, const char* rangeName)const{
+Double_t RooNCSplinePdf::interpolateFcn(Int_t code, const char* rangeName)const{
   const Double_t d_epsilon = 0;
   Double_t res = d_epsilon;
 
@@ -110,7 +110,7 @@ Double_t RooNCSplinePdf::interpolateFcn(Bool_t doIntegrate, const char* rangeNam
     }
     TVectorD Strans = Ainv*Btrans;
 
-    if (!doIntegrate){
+    if (code==0){
       Int_t bin = getWhichBin(theVar);
       Double_t tv = getTVar(kappas, theVar, bin);
 
@@ -134,7 +134,7 @@ Double_t RooNCSplinePdf::interpolateFcn(Bool_t doIntegrate, const char* rangeNam
   }
   else if(npoints==1){
     res = (dynamic_cast<RooAbsReal*>(YList.at(0)))->getVal();
-    if (doIntegrate) res *= (theVar.max(rangeName)-theVar.min(rangeName));
+    if (code!=0 && code%2==0) res *= (theVar.max(rangeName)-theVar.min(rangeName));
   }
 
   return res;
@@ -234,27 +234,21 @@ vector<Double_t> RooNCSplinePdf::getCoefficients(const TVectorD& S, const vector
 }
 
 Double_t RooNCSplinePdf::evaluate() const{
-  Double_t value = interpolateFcn(false);
+  Double_t value = interpolateFcn(0);
   if (value<=0.) return 1e-15;
   return value;
 }
 Int_t RooNCSplinePdf::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* /*rangeName*/) const{
   Int_t code=0;
   if (dynamic_cast<RooRealVar*>(theVar.absArg())!=0){
-    if (matchArgs(allVars, analVars, theVar)) code=1;
+    if (matchArgs(allVars, analVars, theVar)) code=2;
   }
   return code;
 }
 Double_t RooNCSplinePdf::analyticalIntegral(Int_t code, const char* rangeName) const{
-  switch (code){
-  case 1:
-  {
-          Double_t value = interpolateFcn(true, rangeName);
-          if (value<=0.) value = 1e-10;
-          return value;
-  }
-  default:
-    cerr << "RooNCSplinePdf::analyticalIntegral failed due to code = " << code << endl;
-    assert(0);
-  }
+  Double_t value = interpolateFcn(code, rangeName);
+  if (value<=0.) value = 1e-10;
+  return value;
 }
+
+ClassImp(RooNCSplinePdf)
