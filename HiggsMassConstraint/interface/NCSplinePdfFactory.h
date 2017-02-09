@@ -6,6 +6,7 @@
 #include <algorithm>
 #include "RooConstVar.h"
 #include "RooNCSplinePdf.h"
+#include "RooNCSplinePdf_fast.h"
 #include "TGraph.h"
 
 class NCSplinePdfFactory{
@@ -13,7 +14,7 @@ protected:
   TString appendName;
 
   RooAbsReal* splineVar;
-  RooNCSplinePdf* PDF;
+  RooNCSplinePdf_fast* PDF;
 
   std::vector<std::pair<RooConstVar*, RooConstVar*>> points;
 
@@ -21,7 +22,7 @@ public:
   NCSplinePdfFactory(RooAbsReal* splineVar_, TString appendName_="");
   ~NCSplinePdfFactory();
 
-  RooNCSplinePdf* getPDF();
+  RooNCSplinePdf_fast* getPDF();
   void setGraph(TGraph* tg);
 
 protected:

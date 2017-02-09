@@ -102,6 +102,12 @@ Double_t RooNCSplinePdf::interpolateFcn(Int_t code, const char* rangeName)const{
       }
     }
 
+    //cout << "A array:\n";
+    //for (int ix=0; ix<npoints; ix++){
+    //  for (int iy=0; iy<npoints; iy++) cout << Atrans[ix][iy] << " ";
+    //  cout << endl;
+    //}
+
     Double_t det=0;
     TMatrixD Ainv = Atrans.Invert(&det);
     if (det==0.){
@@ -159,7 +165,7 @@ void RooNCSplinePdf::getBArray(const vector<Double_t>& kappas, vector<Double_t>&
   for (int j=1; j<npoints-1; j++){
     Double_t val_j = (dynamic_cast<RooAbsReal*>(YList.at(j)))->getVal();
     Double_t val_jpo = (dynamic_cast<RooAbsReal*>(YList.at(j+1)))->getVal();
-    Double_t val_jmo = (dynamic_cast<RooAbsReal*>(YList.at(j+1)))->getVal();
+    Double_t val_jmo = (dynamic_cast<RooAbsReal*>(YList.at(j-1)))->getVal();
     Double_t kappa_j = kappas.at(j);
     Double_t kappa_jmo = kappas.at(j-1);
     Double_t rsq = pow(kappa_j/kappa_jmo, 2);
@@ -179,7 +185,7 @@ void RooNCSplinePdf::getAArray(const vector<Double_t>& kappas, vector<vector<Dou
     for (int j=0; j<npoints; j++) Aiarray[j]=0;
 
     if (i==0){ Aiarray[0]=2; Aiarray[1]=kappas.at(1)/kappas.at(0); }
-    else if (i==npoints-1){ Aiarray[npoints-2]=1; Aiarray[npoints-1]=kappas.at(npoints-1)/kappas.at(npoints-2); }
+    else if (i==npoints-1){ Aiarray[npoints-2]=1; Aiarray[npoints-1]=2.*kappas.at(npoints-1)/kappas.at(npoints-2); }
     else{
       Double_t kappa_j = kappas.at(i);
       Double_t kappa_jmo = kappas.at(i-1);
@@ -225,6 +231,9 @@ vector<Double_t> RooNCSplinePdf::getCoefficients(const TVectorD& S, const vector
   Double_t dY=(dynamic_cast<RooAbsReal*>(YList.at(bin+1)))->getVal()-A;
   C=3.*dY - 2.*B - S[bin+1]*kappas.at(bin+1)/kappas.at(bin);
   D=-2.*dY + B + S[bin+1]*kappas.at(bin+1)/kappas.at(bin);
+
+  //cout << "A,B,C,D in bin " << bin << ":\n";
+  //cout << "\t" << A << " " << B << " " << C << " " << D << endl;
 
   res.push_back(A);
   res.push_back(B);

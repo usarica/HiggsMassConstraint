@@ -13,6 +13,7 @@
 #include "RooBinning.h"
 #include "RooPlot.h"
 #include "RooNumIntConfig.h"
+#include "RooWorkspace.h"
 #include "TSystem.h"
 #include "TMath.h"
 #include "TCanvas.h"
@@ -23,10 +24,18 @@
 #include "TChain.h"
 #include <ZZMatrixElement/MELA/interface/Mela.h>
 #include <ZZMatrixElement/MELA/interface/ScalarPdfFactory_HVV.h>
+#include "NCSplinePdfFactory.h"
+#include "RooSlicePdf.h"
 
 using namespace RooFit;
 using namespace std;
 
+#ifndef varm12range
+#define varm12range 1
+#endif
+#ifndef varm1m2range
+#define varm1m2range 1
+#endif
 
 // Global variables
 const double m1m2_BinWidth = 1.;
@@ -62,7 +71,12 @@ void getProjection_single_HVV(string gSet, string decaytype, string strprojvar){
   RooRealVar* Phi1 = new RooRealVar("phi1", "#Phi_{1}", -TMath::Pi(), TMath::Pi()); if (strprojvar==Phi1->GetName()) projvar=Phi1;
   RooRealVar* Y = new RooRealVar("Y", "Y", 0); if (strprojvar==Y->GetName()) projvar=Y;
   if (projvar!=0){
+#if varm1m2range==1
     const unsigned int nevals=101;
+#else
+    unsigned int nevals=101;
+    if (projvar==m1 || projvar==m2) nevals=201;
+#endif
     const double projmin=projvar->getMin();
     const double projmax=projvar->getMax();
     const double projwidth=(projmax-projmin)/((const double)(nevals-1));
@@ -148,22 +162,35 @@ void getProjection_single_HVV(string gSet, string decaytype, string strprojvar){
       TFile* foutput = TFile::Open(Form("H%sDecay_%sProjection_NoInterf_%s%s", decaytype.c_str(), strprojvar.c_str(), strcoupl.c_str(), ".root"), "recreate");
       cout << "Will compute mH=\n";
       vector<double> masses;
+#if varm12range==1
       double massmin=(int)(m1Range[0]+m2Range[0]+m1m2_BinWidth+0.5);
+#else
+      double massmin=65;
+#endif
       double mass=massmin;
       TTree* masses_tree = new TTree("masses", "");
       masses_tree->Branch("mH", &mass);
+#if varm12range==1
       while (mass<=15000){
         cout << mass << "\n";
         masses.push_back(mass); masses_tree->Fill();
         double massinc;
         if (mass<200.) massinc=1;
-        else if (mass<600.) massinc=2.;
-        else if (mass<1500.) massinc=5.;
-        else if (mass<3000.) massinc=10.;
-        else if (mass<10000.) massinc=50.;
-        else massinc=100.;
+        else if (mass<600.) massinc=10.;
+        else if (mass<1500.) massinc=50.;
+        else if (mass<3000.) massinc=100.;
+        else if (mass<10000.) massinc=500.;
+        else massinc=1000.;
         mass += massinc;
       }
+#else
+      while (mass<=500){
+        cout << mass << "\n";
+        masses.push_back(mass); masses_tree->Fill();
+        double massinc=2;
+        mass += massinc;
+      }
+#endif
       const unsigned int nbins=masses.size();
       cout << "Total number of mass points to evaluate: " << nbins << "==" << masses_tree->GetEntries() << endl;
       cout << endl;
@@ -175,6 +202,7 @@ void getProjection_single_HVV(string gSet, string decaytype, string strprojvar){
         double projval=projmin+projwidth*ip;
         projarray.push_back(projval);
       }
+#if varm1m2range==1
       if (projvar==m1 || projvar==m2){
         double mv, gamv;
         pdf->getMVGamV(&mv, &gamv);
@@ -183,8 +211,9 @@ void getProjection_single_HVV(string gSet, string decaytype, string strprojvar){
         double projnewmax=mv+2.*gamv;
         unsigned int nextrabins=41;
         if (projvar==m2){
-          double projnewmax=mv+6.*gamv;
-          unsigned int nextrabins=161;
+          projnewmin=mv-1.*gamv;
+          projnewmax=mv+1.*gamv;
+          nextrabins=81;
         }
         double projnewwidth=(projnewmax-projnewmin)/((const double)(nextrabins-1));
         cout << "Adding extra " << nextrabins << " points from " << projnewmin << " to " << projnewmax  << " in steps of " << projnewwidth << endl;
@@ -193,6 +222,7 @@ void getProjection_single_HVV(string gSet, string decaytype, string strprojvar){
           addByLowest(projnewval, projarray);
         }
       }
+#endif
       unsigned int nprojbins = projarray.size();
 
       for (unsigned int ip=0; ip<nprojbins; ip++) cout << projarray.at(ip) << '\n';
@@ -220,6 +250,34 @@ void getProjection_single_HVV(string gSet, string decaytype, string strprojvar){
         tgint->SetTitle(Form("Projection at mH=%.0f GeV", mPOLE));
         tgint->GetXaxis()->SetTitle(projvar->GetTitle());
         tgint->GetYaxis()->SetTitle(Form("H%s amplitude", decaytype.c_str()));
+        tgint->SetMarkerStyle(20);
+        tgint->SetMarkerSize(1.5);
+
+        if (projvar==m1 || projvar==m2){
+          NCSplinePdfFactory* spFactory = new NCSplinePdfFactory(projvar, Form("mH%.0f", mPOLE));
+          spFactory->setGraph(tgint);
+          RooNCSplinePdf_fast* spPDF = spFactory->getPDF();
+
+          RooRealIntegral spPDFint("spPDFint", "", *spPDF, RooArgSet(*projvar));
+          double spint = spPDFint.getVal();
+          double* yy = tgint->GetY();
+          for (int ip=0; ip<tgint->GetN(); ip++) yy[ip]/=spint;
+          RooPlot* plot = projvar->frame((projvar->getMax()-projvar->getMin())/m1m2_BinWidth);
+          plot->GetXaxis()->CenterTitle();
+          plot->GetYaxis()->SetTitleOffset(1.2);
+          plot->GetYaxis()->CenterTitle();
+          plot->GetYaxis()->SetTitle(tgint->GetYaxis()->GetTitle());
+          plot->GetXaxis()->SetTitle(tgint->GetXaxis()->GetTitle());
+          plot->GetXaxis()->SetNdivisions(-505);
+          plot->SetTitle(tgint->GetTitle());
+          spPDF->plotOn(plot, LineColor(kRed), LineWidth(2));
+          TCanvas* canvas = new TCanvas(Form("c_%s", tgint->GetName()), "", 600, 600);
+          plot->Draw();
+          tgint->Draw("psame");
+          foutput->WriteTObject(canvas);
+          canvas->Close();
+        }
+
         foutput->WriteTObject(tgint);
         delete tgint;
       }

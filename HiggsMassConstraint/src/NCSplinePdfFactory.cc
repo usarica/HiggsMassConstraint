@@ -56,7 +56,7 @@ void NCSplinePdfFactory::initPDF(){
   TString name = "PDF";
   if (appendName!="") name = Form("%s_%s", name.Data(), appendName.Data());
   TString title=name;
-  PDF = new RooNCSplinePdf(
+  PDF = new RooNCSplinePdf_fast(
     name.Data(),
     title.Data(),
     *splineVar,
@@ -64,4 +64,4 @@ void NCSplinePdfFactory::initPDF(){
     YList
     );
 }
-RooNCSplinePdf* NCSplinePdfFactory::getPDF(){ return PDF; }
+RooNCSplinePdf_fast* NCSplinePdfFactory::getPDF(){ return PDF; }

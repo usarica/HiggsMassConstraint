@@ -36,7 +36,7 @@ Double_t RooSpinZero_7DComplex_withAccep_HVV_fast::evaluate() const{
     && intCodeStart%prime_Phi==0
     && intCodeStart%prime_Phi1==0
     ) value /= evalOverallIntegral();
-  std::cout << "value/code=" << value << " / " << intCodeStart << std::endl;
+  //std::cout << "value/code=" << value << " / " << intCodeStart << std::endl;
   return value;
 }
 
@@ -53,7 +53,7 @@ Int_t RooSpinZero_7DComplex_withAccep_HVV_fast::getAnalyticalIntegral(RooArgSet&
   return code;
 }
 Double_t RooSpinZero_7DComplex_withAccep_HVV_fast::analyticalIntegral(Int_t code, const char* rangeName) const{
-  std::cout << "int/code=" << intCodeStart << " / " << code << std::endl;
+  //std::cout << "int/code=" << intCodeStart << " / " << code << std::endl;
   if (
     intCodeStart%prime_m1==0
     && intCodeStart%prime_m2==0
