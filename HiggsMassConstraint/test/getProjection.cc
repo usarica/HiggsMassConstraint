@@ -2,6 +2,14 @@
 #include <cmath>
 #include <string>
 #include <algorithm>
+#include "TSystem.h"
+#include "TMath.h"
+#include "TCanvas.h"
+#include "TAxis.h"
+#include "TH1.h"
+#include "TGaxis.h"
+#include "TString.h"
+#include "TChain.h"
 #include "RooGlobalFunc.h"
 #include "RooRealVar.h"
 #include "RooDataSet.h"
@@ -14,14 +22,6 @@
 #include "RooPlot.h"
 #include "RooNumIntConfig.h"
 #include "RooWorkspace.h"
-#include "TSystem.h"
-#include "TMath.h"
-#include "TCanvas.h"
-#include "TAxis.h"
-#include "TH1.h"
-#include "TGaxis.h"
-#include "TString.h"
-#include "TChain.h"
 #include <ZZMatrixElement/MELA/interface/Mela.h>
 #include <ZZMatrixElement/MELA/interface/ScalarPdfFactory_HVV.h>
 #include "NCSplinePdfFactory.h"
@@ -44,6 +44,7 @@ const double m2Range[2]={ 12., 120. };
 const Int_t intCodeStart = RooSpin::prime_h1*RooSpin::prime_h2*RooSpin::prime_Phi*RooSpin::prime_hs*RooSpin::prime_Phi1;
 const bool recordPDFHisto=false;
 
+TString savePlot(TString name, TCanvas* c);
 void splitOption(const string rawoption, string& wish, string& value, char delimiter);
 void splitOptionRecursive(const string rawoption, vector<string>& splitoptions, char delimiter);
 Bool_t checkListVariable(const vector<string>& list, const string& var);
@@ -52,14 +53,14 @@ string set_gHVV(RooSpinZero::modelCouplings& couplings, string gSet);
 void getProjection_single_HVV(string gSet, string decaytype, string strprojvar);
 
 void getProjection(){
-  getProjection_single_HVV("ghz1=1,0", "ZZ4l", "m2");
+  gSystem->Exec("mkdir -p ./plots");
   getProjection_single_HVV("ghz1=1,0", "ZZ4l", "m1");
+  getProjection_single_HVV("ghz1=1,0", "ZZ4l", "m2");
 }
-
 
 void getProjection_single_HVV(string gSet, string decaytype, string strprojvar){
   RooRealVar* projvar=0;
-  RooRealVar* m12 = new RooRealVar("m12", "m_{H} (GeV)", 70., 20000.); if (strprojvar==m12->GetName()) projvar=m12;
+  RooRealVar* m12 = new RooRealVar("m12", "m_{H} (GeV)", m1Range[0]+m2Range[0], 20000.); if (strprojvar==m12->GetName()) projvar=m12;
   RooRealVar* m1 = new RooRealVar("m1", "m_{1} (GeV)", m1Range[0], m1Range[0], m1Range[1]); if (strprojvar==m1->GetName()) projvar=m1;
   RooRealVar* m2 = new RooRealVar("m2", "m_{2} (GeV)", m2Range[0], m2Range[0], m2Range[1]); if (strprojvar==m2->GetName()) projvar=m2;
   m1->setBins((m1->getMax()-m1->getMin())/m1m2_BinWidth);
@@ -71,6 +72,8 @@ void getProjection_single_HVV(string gSet, string decaytype, string strprojvar){
   RooRealVar* Phi1 = new RooRealVar("phi1", "#Phi_{1}", -TMath::Pi(), TMath::Pi()); if (strprojvar==Phi1->GetName()) projvar=Phi1;
   RooRealVar* Y = new RooRealVar("Y", "Y", 0); if (strprojvar==Y->GetName()) projvar=Y;
   if (projvar!=0){
+    gSystem->Exec(Form("mkdir -p ./plots/%s", projvar->GetName()));
+
 #if varm1m2range==1
     const unsigned int nevals=101;
 #else
@@ -230,6 +233,8 @@ void getProjection_single_HVV(string gSet, string decaytype, string strprojvar){
       cout << endl;
 
       double* xyarray[2]={ new double[nprojbins], new double[nprojbins] };
+
+      TString gifCmd;
       for (unsigned int ibin=0; ibin<nbins; ibin++){
         double mPOLE = masses.at(ibin);
         cout << "Evaluating mH=" << mPOLE << endl;
@@ -251,12 +256,12 @@ void getProjection_single_HVV(string gSet, string decaytype, string strprojvar){
         tgint->GetXaxis()->SetTitle(projvar->GetTitle());
         tgint->GetYaxis()->SetTitle(Form("H%s amplitude", decaytype.c_str()));
         tgint->SetMarkerStyle(20);
-        tgint->SetMarkerSize(1.5);
+        tgint->SetMarkerSize(0.8);
 
         if (projvar==m1 || projvar==m2){
           NCSplinePdfFactory* spFactory = new NCSplinePdfFactory(projvar, Form("mH%.0f", mPOLE));
           spFactory->setGraph(tgint);
-          RooNCSplinePdf_fast* spPDF = spFactory->getPDF();
+          RooNCSplinePdf_1D_fast* spPDF = spFactory->getPDF();
 
           RooRealIntegral spPDFint("spPDFint", "", *spPDF, RooArgSet(*projvar));
           double spint = spPDFint.getVal();
@@ -274,7 +279,11 @@ void getProjection_single_HVV(string gSet, string decaytype, string strprojvar){
           TCanvas* canvas = new TCanvas(Form("c_%s", tgint->GetName()), "", 600, 600);
           plot->Draw();
           tgint->Draw("psame");
+          canvas->Modified();
+          canvas->Update();
           foutput->WriteTObject(canvas);
+          gifCmd += savePlot(projvar->GetName(), canvas);
+          gifCmd += " ";
           canvas->Close();
         }
 
@@ -284,6 +293,12 @@ void getProjection_single_HVV(string gSet, string decaytype, string strprojvar){
       foutput->Close();
 
       for (unsigned int ixy=0; ixy<2; ixy++) delete[] xyarray[ixy];
+
+      if (gifCmd!=""){
+        gifCmd.Prepend("convert ");
+        gifCmd.Append(Form("./plots/%s/all.gif", projvar->GetName()));
+        gSystem->Exec(gifCmd);
+      }
     }
 
     delete someHiggs;
@@ -464,4 +479,10 @@ void addByLowest(double val, std::vector<double>& valArray){
     }
   }
   if (!inserted) valArray.push_back(val);
+}
+
+TString savePlot(TString name, TCanvas* c){
+  TString plotname = Form("./plots/%s/%s.png", name.Data(), c->GetName());
+  c->SaveAs(plotname);
+  return plotname;
 }
