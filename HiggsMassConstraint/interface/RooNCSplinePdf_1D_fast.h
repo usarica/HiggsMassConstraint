@@ -18,7 +18,7 @@
 class RooNCSplinePdf_1D_fast : public RooNCSplinePdf_1D{
 protected:
   std::vector<Double_t> kappaX;
-  std::vector<std::vector<Double_t>> coefX;
+  std::vector<std::vector<Double_t>> coefficients;
 
 public:
   RooNCSplinePdf_1D_fast();

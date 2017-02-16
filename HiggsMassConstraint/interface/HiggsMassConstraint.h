@@ -25,7 +25,7 @@
 
 #include <ZZMatrixElement/MELA/interface/Mela.h>
 #include "ScalarPdfFactory_HVV_fast.h"
-#include "NCSplinePdfFactory.h"
+#include "NCSplinePdfFactory_1D.h"
 #include "SlicePdfFactory.h"
 #include "RooSlicePdf.h"
 #include "RooRelBWProduct.h"
@@ -291,7 +291,7 @@ protected:
   ScalarPdfFactory_HVV* hvvFactory;
   ScalarPdfFactory_HVV_fast* hvvFastFactory;
   TensorPdfFactory_ppHVV* xvvFactory;
-  std::vector<NCSplinePdfFactory*> splineFactories;
+  std::vector<NCSplinePdfFactory_1D*> splineFactories;
   SlicePdfFactory* slicePDFFactory;
   RooSpin* spinPDF;
   RooSlicePdf* slicePDF;

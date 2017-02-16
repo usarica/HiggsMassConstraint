@@ -83,6 +83,7 @@ Double_t RooNCSplinePdf_2D::interpolateFcn(Int_t code, const char* rangeName)con
   }
 
   vector<vector<Double_t>> yA; vector<Double_t> kappaY; getKappa(kappaY, 1); getAArray(kappaY, yA);
+  npoints=kappaY.size();
   TMatrixD yAtrans(npoints, npoints);
   for (int i=0; i<npoints; i++){ for (int j=0; j<npoints; j++){ yAtrans[i][j]=yA.at(i).at(j); } }
   det=0;
@@ -174,13 +175,13 @@ Double_t RooNCSplinePdf_2D::interpolateFcn(Int_t code, const char* rangeName)con
         }
         else tyhigh=ty;
 
-        theCoef += evalSplineSegment(yCoefs.at(iy), tyhigh, tylow, (code>0 && code%3==0));
+        theCoef += evalSplineSegment(yCoefs.at(iy), kappaY.at(iy), tyhigh, tylow, (code>0 && code%3==0));
       }
       xCoefs.push_back(theCoef);
     }
 
     // Evaluate value of spline at x with coefficients evaluated at y
-    res += evalSplineSegment(xCoefs, txhigh, txlow, (code>0 && code%2==0));
+    res += evalSplineSegment(xCoefs, kappaX.at(ix), txhigh, txlow, (code>0 && code%2==0));
   }
 
   return res;
@@ -239,14 +240,24 @@ Int_t RooNCSplinePdf_2D::getWhichBin(const Double_t& val, const Int_t whichDirec
 Double_t RooNCSplinePdf_2D::getTVar(const vector<Double_t>& kappas, const Double_t& val, const Int_t& bin, const Int_t whichDirection)const{
   Double_t K;
   K=kappas.at(bin);
-  if (whichDirection==0) return (Double_t)((val-(dynamic_cast<RooAbsReal*>(XList.at(bin)))->getVal())*K);
-  else return (Double_t)((val-(dynamic_cast<RooAbsReal*>(YList.at(bin)))->getVal())*K);
+  RooListProxy const* gridDir;
+  if (whichDirection==0) gridDir=&XList;
+  else gridDir=&YList;
+  return (Double_t)((val-(dynamic_cast<RooAbsReal*>(gridDir->at(bin)))->getVal())*K);
 }
 
 vector<vector<Double_t>> RooNCSplinePdf_2D::getCoefficientsPerY(const std::vector<Double_t>& kappaX, const TMatrixD& xAinv, const Int_t& ybin, const Int_t xbin)const{
   vector<Double_t> fcnList;
-  for (int bin=0; bin<npointsX; bin++) fcnList.push_back((dynamic_cast<RooAbsReal*>(FcnList.at(npointsX*ybin+bin)))->getVal());
+  for (int bin=0; bin<npointsX; bin++){ fcnList.push_back((dynamic_cast<RooAbsReal*>(FcnList.at(npointsY*bin+ybin)))->getVal()); }
+  //for (unsigned int bin=0; bin<fcnList.size(); bin++) cout << "RooNCSplinePdf_2D::getCoefficientsPerY: fcnList[" << bin << " | ybin = " << ybin << ", xbin = " << xbin << "] = " << fcnList[bin] << endl;
   vector<vector<Double_t>> coefs = getCoefficientsAlongDirection(kappaX, xAinv, fcnList, xbin);
+  //for (unsigned int bin=0; bin<coefs.size(); bin++){
+  //  cout << "RooNCSplinePdf_2D::getCoefficientsPerY: coefs[" << bin << "] = ";
+  //  for (unsigned int ic=0; ic<coefs.at(bin).size(); ic++){
+  //    if (ic<coefs.at(bin).size()-1) cout << coefs.at(bin).at(ic) << " ";
+  //    else cout << coefs.at(bin).at(ic) << endl;
+  //  }
+  //}
   return coefs;
 }
 

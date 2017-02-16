@@ -64,7 +64,7 @@ RooNCSplinePdf_1D(name, title, inXVar, inXList, inFcnList)
 
     vector<Double_t> fcnList;
     for (int bin=0; bin<npointsX; bin++) fcnList.push_back((dynamic_cast<RooAbsReal*>(FcnList.at(bin)))->getVal());
-    coefX = getCoefficientsAlongDirection(kappaX, xAinv, fcnList, -1);
+    coefficients = getCoefficientsAlongDirection(kappaX, xAinv, fcnList, -1);
   }
   else assert(0);
 }
@@ -75,10 +75,10 @@ RooNCSplinePdf_1D_fast::RooNCSplinePdf_1D_fast(
   ) : RooNCSplinePdf_1D(other,name),
   kappaX(other.kappaX)
 {
-  for (unsigned int ibin=0; ibin<other.coefX.size(); ibin++){
+  for (unsigned int ibin=0; ibin<other.coefficients.size(); ibin++){
     vector<Double_t> coef;
-    for (unsigned int ic=0; ic<other.coefX.at(ibin).size(); ic++) coef.push_back(other.coefX.at(ibin).at(ic));
-    coefX.push_back(coef);
+    for (unsigned int ic=0; ic<other.coefficients.at(ibin).size(); ic++) coef.push_back(other.coefficients.at(ibin).at(ic));
+    coefficients.push_back(coef);
   }
 }
 
@@ -99,7 +99,7 @@ Double_t RooNCSplinePdf_1D_fast::interpolateFcn(Int_t code, const char* rangeNam
     txmax = getTVar(kappaX, theXVar.max(rangeName), xbinmax, 0);
   }
 
-  int nxbins = (int)coefX.size();
+  int nxbins = (int)coefficients.size();
   for (int ix=0; ix<nxbins; ix++){
     if (
       (xbin>=0 && ix!=xbin)
@@ -115,7 +115,7 @@ Double_t RooNCSplinePdf_1D_fast::interpolateFcn(Int_t code, const char* rangeNam
     else txhigh=tx;
 
     // Get the x coefficients at bin ix and evaluate value of spline at x
-    res += evalSplineSegment(coefX.at(ix), txhigh, txlow, (code>0 && code%2==0));
+    res += evalSplineSegment(coefficients.at(ix), kappaX.at(ix), txhigh, txlow, (code>0 && code%2==0));
   }
 
   return res;

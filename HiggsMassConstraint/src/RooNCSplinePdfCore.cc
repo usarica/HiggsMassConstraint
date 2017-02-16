@@ -23,14 +23,16 @@ RooNCSplinePdfCore::RooNCSplinePdfCore(
   const char* name,
   const char* title
   ) :
-  RooAbsPdf(name, title)
+  RooAbsPdf(name, title),
+  verbosity(RooNCSplinePdfCore::kSilent)
 {}
 
 RooNCSplinePdfCore::RooNCSplinePdfCore(
   const RooNCSplinePdfCore& other,
   const char* name
   ) :
-  RooAbsPdf(other, name)
+  RooAbsPdf(other, name),
+  verbosity(other.verbosity)
 {}
 
 
@@ -115,13 +117,16 @@ vector<vector<Double_t>> RooNCSplinePdfCore::getCoefficientsAlongDirection(const
   return coefs;
 }
 
-Double_t RooNCSplinePdfCore::evalSplineSegment(const std::vector<Double_t>& coefs, Double_t tup, Double_t tdn, Bool_t doIntegrate)const{
+Double_t RooNCSplinePdfCore::evalSplineSegment(const std::vector<Double_t>& coefs, const Double_t kappa, Double_t tup, Double_t tdn, Bool_t doIntegrate)const{
   Double_t res=0;
   for (unsigned int ic=0; ic<coefs.size(); ic++){
-    if (doIntegrate) res += coefs.at(ic)*(pow(tup, (int)(ic+1))-pow(tdn, (int)(ic+1)))/((Double_t)(ic+1));
+    if (doIntegrate) res += coefs.at(ic)*(pow(tup, (int)(ic+1))-pow(tdn, (int)(ic+1)))/((Double_t)(ic+1))/kappa;
     else res += coefs.at(ic)*pow(tup, (int)ic);
   }
   return res;
 }
+
+void RooNCSplinePdfCore::setVerbosity(VerbosityLevel flag){ verbosity=flag; }
+
 
 ClassImp(RooNCSplinePdfCore)
