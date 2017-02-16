@@ -356,8 +356,8 @@ void HiggsMassConstraint::constructSplinePDFs(){
     deps.add(*(m[0]));
     for (unsigned int it=0; it<tgs.size(); it++){
       if (tgs.at(it)!=0){
-        NCSplinePdfFactory* spFactory = new NCSplinePdfFactory(m[0], TString(tgs.at(it)->GetName()));
-        spFactory->setGraph(tgs.at(it));
+        NCSplinePdfFactory_1D* spFactory = new NCSplinePdfFactory_1D(m[0], TString(tgs.at(it)->GetName()));
+        spFactory->setPoints(tgs.at(it));
         pdfs.add(*(spFactory->getPDF()));
         splineFactories.push_back(spFactory);
         delete tgs.at(it);

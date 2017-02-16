@@ -131,7 +131,7 @@ Double_t RooNCSplinePdf_1D::interpolateFcn(Int_t code, const char* rangeName)con
     vector<Double_t> xCoefs = coefs.at(ix);
 
     // Evaluate value of spline at x
-    res += evalSplineSegment(xCoefs, txhigh, txlow, (code>0 && code%2==0));
+    res += evalSplineSegment(xCoefs, kappaX.at(ix), txhigh, txlow, (code>0 && code%2==0));
   }
 
   return res;
