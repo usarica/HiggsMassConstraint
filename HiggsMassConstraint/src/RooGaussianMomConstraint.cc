@@ -14,8 +14,8 @@ RooGaussianMomConstraint::RooGaussianMomConstraint(
   Int_t fixCode_
   ) : RooAbsPdf(name, title),
 
-  variables("matrixElement", "List of inverse covariance matrix elements", this),
-  means("matrixElement", "List of inverse covariance matrix elements", this),
+  variables("variables", "List of variables", this),
+  means("means", "List of means", this),
   matrixElement("matrixElement", "List of inverse covariance matrix elements", this),
   coordinates(coordinates_)
 {
@@ -27,8 +27,8 @@ RooGaussianMomConstraint::RooGaussianMomConstraint(
 
 
 RooGaussianMomConstraint::RooGaussianMomConstraint(const RooGaussianMomConstraint& other, const char* name) : RooAbsPdf(other, name),
-variables("matrixElement", "List of inverse covariance matrix elements", this),
-means("matrixElement", "List of inverse covariance matrix elements", this),
+variables("variables", "List of variables", this),
+means("means", "List of means", this),
 matrixElement("matrixElement", "List of inverse covariance matrix elements", this),
 coordinates(other.coordinates),
 fixCode(other.fixCode)
@@ -263,8 +263,8 @@ Double_t RooGaussianMomConstraint::computeCaseXYZ(const Int_t code) const{ // Th
 
 #if rmg_debug==1
     cout << "xb, xmax, xmin = " << xb << ", " << xmax << ", " << xmin << endl;
-    cout << "y, yb = " << y << ", " << yb << endl;
-    cout << "z, zb = " << z << ", " << zb << endl;
+    //cout << "y, yb = " << y << ", " << yb << endl;
+    //cout << "z, zb = " << z << ", " << zb << endl;
 #endif
     
     Double_t invCovMat[3][3]={ { 0 } };
@@ -426,8 +426,8 @@ Double_t RooGaussianMomConstraint::computeCaseRhoLambdaPhi(const Int_t code) con
 
 #if rmg_debug==1
     cout << "xb, xmax, xmin = " << xb << ", " << xmax << ", " << xmin << endl;
-    cout << "y, yb = " << y << ", " << yb << endl;
-    cout << "z, zb = " << z << ", " << zb << endl;
+    //cout << "y, yb = " << y << ", " << yb << endl;
+    //cout << "z, zb = " << z << ", " << zb << endl;
 #endif
 
     Double_t invCovMat[3][3]={ { 0 } };

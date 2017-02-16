@@ -24,6 +24,10 @@
 #include "RooFitResult.h"
 
 #include <ZZMatrixElement/MELA/interface/Mela.h>
+#include "ScalarPdfFactory_HVV_fast.h"
+#include "NCSplinePdfFactory.h"
+#include "SlicePdfFactory.h"
+#include "RooSlicePdf.h"
 #include "RooRelBWProduct.h"
 #include "RooGaussianMomConstraint.h"
 #include "RooDiracDeltaFunction.h"
@@ -47,6 +51,15 @@
 #ifndef hmc_debug
 #define hmc_debug 0
 #endif
+#ifndef gauscheck
+#define gauscheck
+#endif
+#undef gauscheck
+// xstr_lit is defined in TVar.hh
+#ifndef _hmcpkgpath_
+#define _hmcpkgpath_ ./
+#endif
+#define _hmcpkgpathstr_ xstr_lit(_hmcpkgpath_)
 
 
 namespace HMCtoolkit{
@@ -118,14 +131,14 @@ public:
     CovDiagonals_OnlyFSR_Lambda,
     CovDiagonals_OnlyFSR_Phi,
 
-    nFitMomentumStrategies // This is actually not a strategy, just a number!
+    nFitMomentumStrategies
   };
   enum FitVVStrategy{
     Fit_All_V1V2,
-    Fit_All_V1, // = Fit_WorstTwo_V1
-    Fit_All_V2, // = Fit_WorstTwo_V2
+    Fit_All_V1,
+    Fit_All_V2,
 
-    nFitVVStrategies // This is actually not a strategy, just a number!
+    nFitVVStrategies
   };
 
   // Member functions
@@ -140,8 +153,8 @@ public:
     );
   virtual ~HiggsMassConstraint();
 
-  void setJECUserFloatString(TString jecString_="jec_unc"){ jecString=jecString_; }
-  void setMuonKalmanCorrectedPtErrorString(TString kalmanMuPtString_="correctedPtError"){ kalmanMuPtString=kalmanMuPtString_; }
+  void setJECUserFloatString(TString jecString_){ jecString=jecString_; }
+  void setMuonKalmanCorrectedPtErrorString(TString kalmanMuPtString_){ kalmanMuPtString=kalmanMuPtString_; }
   void setPtEtaCuts(
     Double_t pTcut_muon_=5.,
     Double_t etacut_muon_=2.4,
@@ -161,12 +174,12 @@ public:
     Double_t mFFSScut_=4.
     );
 
-  // Set PDF to fast or thorough
-  void setFastPDF(bool useFastPDF_=false);
+  // Set PDF to fast
+  void setFastPDF(bool useFastPDF_=true);
 
   // Make sure each strategy is implemented correctly. Affects the behavior of covariance matrix extractions in addDaughters.
-  void setFitMomentumStrategy(HiggsMassConstraint::FitMomentumStrategy fitMomStrategy_=HiggsMassConstraint::/*FullCov_All_pTLambdaPhi*/CovDiagonals_All_pT);
-  void setFitVVStrategy(HiggsMassConstraint::FitVVStrategy fitVVStrategy_=HiggsMassConstraint::Fit_All_V1V2);
+  void setFitMomentumStrategy(HiggsMassConstraint::FitMomentumStrategy fitMomStrategy_=HiggsMassConstraint::/*FullCov_All_pTLambdaPhi*/FullCov_NoFSR_pT);
+  void setFitVVStrategy(HiggsMassConstraint::FitVVStrategy fitVVStrategy_=HiggsMassConstraint::Fit_All_V1);
   HiggsMassConstraint::FitMomentumStrategy getFitMomentumStrategy();
 
   // Do the fit for the fermion-FSR pairs, FSR-being per-fermion.
@@ -179,11 +192,13 @@ public:
   Double_t getRefittedMass(Int_t imass) const;
   TLorentzVector getRefittedMomentum(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
 
+  // Get the integration graph
+  void setFastIntegrationGraph(TString strfname, TString strtgname);
 
 protected:
 
   // Data members
-  const Double_t sqrts;
+  Double_t sqrts;
   RooSpin::VdecayType Vdecay1;
   RooSpin::VdecayType Vdecay2;
   const Int_t X_spin;
@@ -195,7 +210,7 @@ protected:
   HiggsMassConstraint::FitMomentumStrategy fitMomStrategy;
   HiggsMassConstraint::FitMomentumStrategy fitMomStrategy_final;
 
-  HiggsMassConstraint::FitVVStrategy fitVVStrategy; // There is no "final" counterpart to this one. Decrementation or incrementation is not allowed due to physics interest/reasons!
+  HiggsMassConstraint::FitVVStrategy fitVVStrategy;
 
   Double_t pTcut_muon;
   Double_t lambdacut_muon;
@@ -215,27 +230,22 @@ protected:
   RooRealVar* varZero;
   RooRealVar* varOne;
 
-  RooRealVar* pT_ferm[2][2];
-  RooRealVar* lambda_ferm[2][2]; // lambda = Pi/2 - theta
-  RooRealVar* phi_ferm[2][2];
+  // Below, lambda = Pi/2 - theta
 
+  RooRealVar* pT_ferm[2][2];
+  RooRealVar* lambda_ferm[2][2];
+  RooRealVar* phi_ferm[2][2];
   Int_t pdgid_ferm[2][2];
   RooRealVar* massbar_ferm[2][2];
-  RooRealVar* pTbar_ferm[2][2];
-  RooRealVar* lambdabar_ferm[2][2];
-  RooRealVar* phibar_ferm[2][2];
 
   RooRealVar* pT_fsr[2][2];
   RooRealVar* lambda_fsr[2][2];
   RooRealVar* phi_fsr[2][2];
 
-  RooRealVar* pTbar_fsr[2][2];
-  RooRealVar* lambdabar_fsr[2][2];
-  RooRealVar* phibar_fsr[2][2];
-
   RooRealVar* pTobs_ferm[2][2];
   RooRealVar* lambdaobs_ferm[2][2];
   RooRealVar* phiobs_ferm[2][2];
+
   RooRealVar* pTobs_fsr[2][2];
   RooRealVar* lambdaobs_fsr[2][2];
   RooRealVar* phiobs_fsr[2][2];
@@ -273,26 +283,28 @@ protected:
 
   std::vector<pair<const reco::Candidate*, const pat::PFParticle*>> inputRaw_Fermion_FSR;
 
-  // Delta functions of bar-obs
-  RooDiracDeltaFunction* pTDeltaFcn_ferm[2][2];
-  RooDiracDeltaFunction* lambdaDeltaFcn_ferm[2][2];
-  RooDiracDeltaFunction* phiDeltaFcn_ferm[2][2];
-  RooDiracDeltaFunction* pTDeltaFcn_fsr[2][2];
-  RooDiracDeltaFunction* lambdaDeltaFcn_fsr[2][2];
-  RooDiracDeltaFunction* phiDeltaFcn_fsr[2][2];
-  RooProdPdf* DiracDeltaPDF;
+  // Integration graph
+  TGraph* tgint;
+
   // J^CP PDFs
   SpinPdfFactory* pdfFactory;
-  ScalarPdfFactory_ggH* hvvFactory;
-  TensorPdfFactory_HVV* xvvFactory;
+  ScalarPdfFactory_HVV* hvvFactory;
+  ScalarPdfFactory_HVV_fast* hvvFastFactory;
+  TensorPdfFactory_ppHVV* xvvFactory;
+  std::vector<NCSplinePdfFactory*> splineFactories;
+  SlicePdfFactory* slicePDFFactory;
   RooSpin* spinPDF;
+  RooSlicePdf* slicePDF;
   // Fast propagator PDF
   RooRelBWProduct* bwProdPDF; // For fast PDF
   // Simplest PDF possible
-  RooGenericPdf* simpleBWPDF;
+  std::vector<RooGenericPdf*> simpleBWPDF;
   // PDF of constraintson {pT, lambda, phi}_i of fermion i
+#ifndef gauscheck
   RooGaussianMomConstraint* gausConstraintsPDF[2][2][2];
-  //RooGaussian* gausConstraintsPDF[2][2][2];
+#else
+  RooGaussian* gausConstraintsPDF[2][2][2];
+#endif
   // Other Heaviside functions
   RooGenericPdf* auxilliaryConstraintsPDF;
   // Products of constraints
@@ -303,16 +315,17 @@ protected:
 
   RooFitResult* fitResult;
   TMatrixDSym fitCovMatrix;
+  TMatrixDSym initCovMatrix;
 
   // Member functions
   virtual void constructVariables();
   virtual void destroyVariables();
 
-  virtual void constructDeltaFunctions();
-  virtual void destroyDeltaFunctions();
-
   virtual void constructPdfFactory();
   virtual void destroyPdfFactory();
+
+  virtual void constructSplinePDFs();
+  virtual void destroySplinePDFs();
 
   virtual void constructConstraintPdfs();
   virtual void destroyConstraintPdfs();
@@ -323,8 +336,8 @@ protected:
   // Add the fermion-FSR pairs, FSR-being per-fermion. fitRetry=true prevents clearing of the protected objects container and allows another fit through different strategies in case the initial fit fails.
   void addDaughters(std::vector<pair<const reco::Candidate*, const pat::PFParticle*>>& FermionWithFSR, bool fitRetry=false); // To set the Lepton and photon arrays in a pair form. Pass null-pointer if the photon does not exist.
   // Do the fit, retry if unsuccessful.
-  void getDataVariables(RooArgSet* intVars, RooArgSet* condVars) const;
-  RooDataSet* getDataset(RooArgSet* condVars=0) const;
+  void getDataVariables(RooArgSet* fitVars, RooArgSet* intVars, RooArgSet* condVars) const;
+  RooDataSet* getDataset(RooArgSet* fitVars=0, RooArgSet* condVars=0) const;
   void fit();
 
   // Momentum strategy functions
@@ -334,7 +347,6 @@ protected:
   void incrementMomentumStrategy(HiggsMassConstraint::FitMomentumStrategy& strategy_);
   // VV strategy functions
   void testFitVVStrategy(Int_t& fitV1, Int_t& fitV2) const;
-
 
   // Overloaded functions to compute input block-diagonal C(pT, lambda, phi)
   void sortGetCovarianceMatrix(double (&momCov)[9], const reco::Candidate* particle);
@@ -349,6 +361,9 @@ protected:
   void invertThreeDimensional(double (&momCov)[9]);
   void strategicInvertCovarianceMatrix(const Int_t useFullCov, Int_t fitpT, Int_t fitlambda, Int_t fitphi, double (&momCov)[9]);
   void setInverseCovarianceMatrix(Int_t iZ, Int_t iferm, Int_t fsrindex, Double_t momCov[9]);
+  
+  void setInitialCovarianceMatrix(Int_t iZ, Int_t iferm, Int_t fsrindex, Double_t momCov[9]);
+  void resetInitialCovarianceMatrix();
 
   bool standardOrderedFinalCovarianceMatrix(const RooArgList& pars); // Re-order the covariance matrix from the fit, expand as necessary
   Int_t fitParameterCorrespondance(RooRealVar* par);
