@@ -39,6 +39,17 @@ void NCSplinePdfFactory_2D::initPoints(const std::vector<doubleTriplet_t>& pList
     addUnique(Yval, (pList.at(ip))[1]);
     Fcnval.push_back((pList.at(ip))[2]); // Do not use unique here
   }
+  /*
+  cout << "NCSplinePdfFactory_2D::initPoints: xpoints[ " << Xval.size() << "] =";
+  for (unsigned int ip=0; ip<Xval.size(); ip++) cout << " " << Xval.at(ip);
+  cout << endl;
+  cout << "NCSplinePdfFactory_2D::initPoints: ypoints[ " << Yval.size() << "] =";
+  for (unsigned int ip=0; ip<Yval.size(); ip++) cout << " " << Yval.at(ip);
+  cout << endl;
+  cout << "NCSplinePdfFactory_2D::initPoints: fcn[ " << Fcnval.size() << "] =";
+  for (unsigned int ip=0; ip<Fcnval.size(); ip++) cout << " " << Fcnval.at(ip);
+  cout << endl;
+  */
   for (unsigned int ip=0; ip<Xval.size(); ip++){
     TString name = Form("point_x_%i", ip);
     if (appendName!="") name = Form("%s_%s", name.Data(), appendName.Data());

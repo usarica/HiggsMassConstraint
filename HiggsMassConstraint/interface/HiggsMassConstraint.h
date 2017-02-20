@@ -195,6 +195,18 @@ public:
   // Get the integration graph
   void setFastIntegrationGraph(TString strfname, TString strtgname);
 
+  // Derivative functions to use in contracting final C(pT, lambda, phi) to sigma(m1), sigma(m2) or sigma(m12)
+  Double_t d_Ek_d_pTk(Int_t kZ, Int_t kferm, Int_t fsrindex) const;
+  Double_t d_pjk_d_pTk(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const;
+  Double_t d_Ek_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrindex) const;
+  Double_t d_pjk_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const;
+  Double_t d_Ek_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex) const;
+  Double_t d_pjk_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const;
+
+  Double_t d_m123_d_pTk(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const;
+  Double_t d_m123_d_lambdak(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const;
+  Double_t d_m123_d_phik(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const;
+
 protected:
 
   // Data members
@@ -367,19 +379,6 @@ protected:
 
   bool standardOrderedFinalCovarianceMatrix(const RooArgList& pars); // Re-order the covariance matrix from the fit, expand as necessary
   Int_t fitParameterCorrespondance(RooRealVar* par);
-
-
-  // Derivative functions to use in contracting final C(pT, lambda, phi) to sigma(m1), sigma(m2) or sigma(m12)
-  Double_t d_Ek_d_pTk(Int_t kZ, Int_t kferm, Int_t fsrindex) const;
-  Double_t d_pjk_d_pTk(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const;
-  Double_t d_Ek_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrindex) const;
-  Double_t d_pjk_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const;
-  Double_t d_Ek_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex) const;
-  Double_t d_pjk_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const;
-
-  Double_t d_m123_d_pTk(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const;
-  Double_t d_m123_d_lambdak(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const;
-  Double_t d_m123_d_phik(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const;
 
 };
 

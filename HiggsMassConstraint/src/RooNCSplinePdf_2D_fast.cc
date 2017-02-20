@@ -57,6 +57,18 @@ RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast(
   }
   delete coefIter;
 
+  /*
+  cout << "RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast: xpoints[ " << XList.getSize() << "] =";
+  for (int ip=0; ip<XList.getSize(); ip++) cout << " " << ((RooConstVar*)XList.at(ip))->getVal();
+  cout << endl;
+  cout << "RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast: ypoints[ " << YList.getSize() << "] =";
+  for (int ip=0; ip<YList.getSize(); ip++) cout << " " << ((RooConstVar*)YList.at(ip))->getVal();
+  cout << endl;
+  cout << "RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast: fcnpoints[ " << FcnList.getSize() << "] =";
+  for (int ip=0; ip<FcnList.getSize(); ip++) cout << " " << ((RooConstVar*)FcnList.at(ip))->getVal();
+  cout << endl;
+  */
+
   if (npointsX>1 && npointsY>1){
     // Prepare A and kappa arrays for x and y coordinates
     int npoints;
@@ -84,11 +96,12 @@ RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast(
       assert(0);
     }
 
-    vector<vector<vector<Double_t>>> coefsAlongY; // [A,B,C,D][xbin][ybin]
+    // Get the grid of coefficients
+    vector<vector<vector<Double_t>>> coefsAlongY; // [Ax(y),Bx(y),Cx(y),Dx(y)][xbin][ybin]
     int npoldim=0;
     int nxbins=0;
     for (Int_t j=0; j<npointsY; j++){
-      vector<vector<Double_t>> xcoefsAtYj = getCoefficientsPerY(kappaX, xAinv, j, -1); // [ix][A,B,C,D] at each y_j
+      vector<vector<Double_t>> xcoefsAtYj = getCoefficientsPerY(kappaX, xAinv, j, -1); // [ix][Ax,Bx,Cx,Dx] at each y_j
       if (j==0){
         nxbins=xcoefsAtYj.size();
         npoldim=xcoefsAtYj.at(0).size();
@@ -101,7 +114,10 @@ RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast(
           coefsAlongY.push_back(dum_xycoefarray);
         }
       }
-      if (nxbins!=(int)xcoefsAtYj.size() || npoldim!=(int)xcoefsAtYj.at(0).size()) assert(0);
+      if (nxbins!=(int)xcoefsAtYj.size() || npoldim!=(int)xcoefsAtYj.at(0).size()){
+        coutE(InputArguments) << "RooNCSplinePdf_2D_fast::interpolateFcn: nxbins!=(int)xcoefsAtYj.size() || npoldim!=(int)xcoefsAtYj.at(0).size()!" << endl;
+        assert(0);
+      }
       for (int ix=0; ix<nxbins; ix++){
         for (int ipow=0; ipow<npoldim; ipow++) coefsAlongY.at(ipow).at(ix).push_back(xcoefsAtYj.at(ix).at(ipow));
       }

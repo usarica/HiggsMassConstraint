@@ -1692,13 +1692,9 @@ void HiggsMassConstraint::getCovarianceMatrix(double (&momCov)[9], const reco::G
 
     double trackCov[GsfTrack::dimensionMode*GsfTrack::dimensionMode];
     for (int ix=0; ix<GsfTrack::dimensionMode; ix++){
-      for (int iy=0; iy<GsfTrack::dimensionMode; iy++){
-        if (iy>=ix){
-          trackCov[GsfTrack::dimensionMode*ix+iy] = gsftrack->covarianceMode(ix, iy);
-          if ((ix==TrackBase::i_qoverp || ix==TrackBase::i_lambda) && (iy==TrackBase::i_qoverp || iy==TrackBase::i_lambda)) trackCov[GsfTrack::dimensionMode*ix+iy] *= correction;
-          else if ((ix==TrackBase::i_qoverp || ix==TrackBase::i_lambda) || (iy==TrackBase::i_qoverp || iy==TrackBase::i_lambda)) trackCov[GsfTrack::dimensionMode*ix+iy] *= sqrt(correction);
-        }
-        else trackCov[GsfTrack::dimensionMode*ix+iy] = trackCov[GsfTrack::dimensionMode*iy+ix];
+      for (int iy=ix; iy<GsfTrack::dimensionMode; iy++){
+        if (iy>=ix) trackCov[GsfTrack::dimensionMode*ix+iy] = gsftrack->covarianceMode(ix, iy);
+        trackCov[GsfTrack::dimensionMode*iy+ix] = trackCov[GsfTrack::dimensionMode*ix+iy];
       }
     }
 
@@ -1720,7 +1716,7 @@ void HiggsMassConstraint::getCovarianceMatrix(double (&momCov)[9], const reco::G
     const double d_phi_d_lambda = 0;
     const double d_phi_d_phi = 1;
 
-    momCov[3*0+0] = pterr; // pT, pT, no need to re-calculate
+    momCov[3*0+0] = pterr_uncorrected; // pT, pT, no need to re-calculate
     momCov[3*0+1] = // pT, lambda
       d_pT_d_qoverp*d_lambda_d_qoverp * trackCov[GsfTrack::dimensionMode*TrackBase::i_qoverp + TrackBase::i_qoverp] +
       d_pT_d_lambda*d_lambda_d_lambda * trackCov[GsfTrack::dimensionMode*TrackBase::i_lambda + TrackBase::i_lambda] +
@@ -1766,6 +1762,14 @@ void HiggsMassConstraint::getCovarianceMatrix(double (&momCov)[9], const reco::G
       2.* d_phi_d_qoverp*d_phi_d_phi * trackCov[GsfTrack::dimensionMode*TrackBase::i_qoverp + TrackBase::i_phi] +
       2.* d_phi_d_lambda*d_phi_d_phi * trackCov[GsfTrack::dimensionMode*TrackBase::i_lambda + TrackBase::i_phi]
       ;
+
+    // Scale covariance matrix for pT error correction
+    for (unsigned int ix=0; ix<3; ix++){
+      for (unsigned int iy=0; iy<3; iy++){
+        if (ix==iy && ix==0) momCov[3*ix+iy] *= correction;
+        else if (ix==0 || iy==0) momCov[3*ix+iy] *= sqrt(correction);
+      }
+    }
   }
   else{
 #if hmc_debug==1
@@ -1788,13 +1792,9 @@ void HiggsMassConstraint::getCovarianceMatrix(double (&momCov)[9], const pat::Mu
 
   double trackCov[TrackBase::dimension*TrackBase::dimension];
   for (int ix=0; ix<TrackBase::dimension; ix++){
-    for (int iy=0; iy<TrackBase::dimension; iy++){
-      if (iy>=ix) {
-        trackCov[TrackBase::dimension*ix+iy] = particle->muonBestTrack()->covariance(ix, iy);
-        if ((ix==TrackBase::i_qoverp || ix==TrackBase::i_lambda) && (iy==TrackBase::i_qoverp || iy==TrackBase::i_lambda)) trackCov[TrackBase::dimension*ix+iy] *= correction;
-        else if ((ix==TrackBase::i_qoverp || ix==TrackBase::i_lambda) || (iy==TrackBase::i_qoverp || iy==TrackBase::i_lambda)) trackCov[TrackBase::dimension*ix+iy] *= sqrt(correction);
-      }
-      else trackCov[TrackBase::dimension*ix+iy] = trackCov[TrackBase::dimension*iy+ix];
+    for (int iy=ix; iy<TrackBase::dimension; iy++){
+      trackCov[TrackBase::dimension*ix+iy] = particle->muonBestTrack()->covariance(ix, iy);
+      trackCov[TrackBase::dimension*iy+ix] = trackCov[TrackBase::dimension*ix+iy];
     }
   }
 
@@ -1816,7 +1816,7 @@ void HiggsMassConstraint::getCovarianceMatrix(double (&momCov)[9], const pat::Mu
   const double d_phi_d_lambda = 0;
   const double d_phi_d_phi = 1;
 
-  momCov[3*0+0] = pterr; // pT, pT, no need to re-calculate
+  momCov[3*0+0] = pterr_uncorrected; // pT, pT, no need to re-calculate
   momCov[3*0+1] = // pT, lambda
     d_pT_d_qoverp*d_lambda_d_qoverp * trackCov[TrackBase::dimension*TrackBase::i_qoverp + TrackBase::i_qoverp] +
     d_pT_d_lambda*d_lambda_d_lambda * trackCov[TrackBase::dimension*TrackBase::i_lambda + TrackBase::i_lambda] +
@@ -1862,6 +1862,14 @@ void HiggsMassConstraint::getCovarianceMatrix(double (&momCov)[9], const pat::Mu
     2.* d_phi_d_qoverp*d_phi_d_phi * trackCov[TrackBase::dimension*TrackBase::i_qoverp + TrackBase::i_phi] +
     2.* d_phi_d_lambda*d_phi_d_phi * trackCov[TrackBase::dimension*TrackBase::i_lambda + TrackBase::i_phi]
     ;
+
+  // Scale covariance matrix for pT error correction
+  for (unsigned int ix=0; ix<3; ix++){
+    for (unsigned int iy=0; iy<3; iy++){
+      if (ix==iy && ix==0) momCov[3*ix+iy] *= correction;
+      else if (ix==0 || iy==0) momCov[3*ix+iy] *= sqrt(correction);
+    }
+  }
 }
 void HiggsMassConstraint::getCovarianceMatrix(double (&momCov)[9], const reco::PFCandidate* particle){
   for(int i=0;i<9;i++) momCov[i]=0.;
@@ -1882,13 +1890,9 @@ void HiggsMassConstraint::getCovarianceMatrix(double (&momCov)[9], const reco::P
 
     double trackCov[TrackBase::dimension*TrackBase::dimension];
     for (int ix=0; ix<TrackBase::dimension; ix++){
-      for (int iy=0; iy<TrackBase::dimension; iy++){
-        if (iy>=ix){
-          trackCov[TrackBase::dimension*ix+iy] = track->covariance(ix, iy);
-          if ((ix==TrackBase::i_qoverp || ix==TrackBase::i_lambda) && (iy==TrackBase::i_qoverp || iy==TrackBase::i_lambda)) trackCov[TrackBase::dimension*ix+iy] *= correction;
-          else if ((ix==TrackBase::i_qoverp || ix==TrackBase::i_lambda) || (iy==TrackBase::i_qoverp || iy==TrackBase::i_lambda)) trackCov[TrackBase::dimension*ix+iy] *= sqrt(correction);
-        }
-        else trackCov[TrackBase::dimension*ix+iy] = trackCov[TrackBase::dimension*iy+ix];
+      for (int iy=ix; iy<TrackBase::dimension; iy++){
+        trackCov[TrackBase::dimension*ix+iy] = track->covariance(ix, iy);
+        trackCov[TrackBase::dimension*iy+ix] = trackCov[TrackBase::dimension*ix+iy];
       }
     }
 
@@ -1910,7 +1914,7 @@ void HiggsMassConstraint::getCovarianceMatrix(double (&momCov)[9], const reco::P
     const double d_phi_d_lambda = 0;
     const double d_phi_d_phi = 1;
 
-    momCov[3*0+0] = pterr; // pT, pT, no need to re-calculate
+    momCov[3*0+0] = pterr_uncorrected; // pT, pT, no need to re-calculate
     momCov[3*0+1] = // pT, lambda
       d_pT_d_qoverp*d_lambda_d_qoverp * trackCov[TrackBase::dimension*TrackBase::i_qoverp + TrackBase::i_qoverp] +
       d_pT_d_lambda*d_lambda_d_lambda * trackCov[TrackBase::dimension*TrackBase::i_lambda + TrackBase::i_lambda] +
@@ -1956,6 +1960,14 @@ void HiggsMassConstraint::getCovarianceMatrix(double (&momCov)[9], const reco::P
       2.* d_phi_d_qoverp*d_phi_d_phi * trackCov[TrackBase::dimension*TrackBase::i_qoverp + TrackBase::i_phi] +
       2.* d_phi_d_lambda*d_phi_d_phi * trackCov[TrackBase::dimension*TrackBase::i_lambda + TrackBase::i_phi]
       ;
+
+    // Scale covariance matrix for pT error correction
+    for (unsigned int ix=0; ix<3; ix++){
+      for (unsigned int iy=0; iy<3; iy++){
+        if (ix==iy && ix==0) momCov[3*ix+iy] *= correction;
+        else if (ix==0 || iy==0) momCov[3*ix+iy] *= sqrt(correction);
+      }
+    }
   }
   else{
 #if hmc_debug==1
@@ -2205,7 +2217,7 @@ Double_t HiggsMassConstraint::d_Ek_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrind
   return (pz*d_Ek_d_pTk(kZ, kferm, fsrindex));
 }
 Double_t HiggsMassConstraint::d_pjk_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const{
-  if (j!=2) return 0.;
+  if (j!=2) return 0;
   Double_t pT=0;
   Double_t lambda=0;
   if (fsrindex==0){
@@ -2218,7 +2230,7 @@ Double_t HiggsMassConstraint::d_pjk_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrin
   }
   return (pT/pow(cos(lambda), 2));
 }
-Double_t HiggsMassConstraint::d_Ek_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex) const{ return 0.; }
+Double_t HiggsMassConstraint::d_Ek_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex) const{ return 0; }
 Double_t HiggsMassConstraint::d_pjk_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const{
   if (j>=2) return 0.;
   Double_t pT=0;
@@ -2239,26 +2251,26 @@ Double_t HiggsMassConstraint::d_m123_d_pTk(Int_t imass, Int_t kZ, Int_t kferm, I
   if((imass<2 && kZ!=imass) || imass<0 || imass>2) return 0;
 
   Double_t mass=m[imass]->getVal();
-  Double_t pj[4]={ 0 };
+  Double_t sum_pj[4]={ 0 };
   for(int iferm=0; iferm<2; iferm++){
-    pj[0] += px_Hdaughter[kZ][iferm]->getVal();
-    pj[1] += py_Hdaughter[kZ][iferm]->getVal();
-    pj[2] += pz_Hdaughter[kZ][iferm]->getVal();
-    pj[3] += E_Hdaughter[kZ][iferm]->getVal();
+    sum_pj[0] += px_Hdaughter[kZ][iferm]->getVal();
+    sum_pj[1] += py_Hdaughter[kZ][iferm]->getVal();
+    sum_pj[2] += pz_Hdaughter[kZ][iferm]->getVal();
+    sum_pj[3] += E_Hdaughter[kZ][iferm]->getVal();
   }
   if(imass==2){
     for(int iferm=0; iferm<2; iferm++){
-      pj[0] += px_Hdaughter[1-kZ][iferm]->getVal();
-      pj[1] += py_Hdaughter[1-kZ][iferm]->getVal();
-      pj[2] += pz_Hdaughter[1-kZ][iferm]->getVal();
-      pj[3] += E_Hdaughter[1-kZ][iferm]->getVal();
+      sum_pj[0] += px_Hdaughter[1-kZ][iferm]->getVal();
+      sum_pj[1] += py_Hdaughter[1-kZ][iferm]->getVal();
+      sum_pj[2] += pz_Hdaughter[1-kZ][iferm]->getVal();
+      sum_pj[3] += E_Hdaughter[1-kZ][iferm]->getVal();
     }
   }
 
   Double_t value = d_Ek_d_pTk(kZ, kferm, fsrindex);
   if (mass!=0.){
-    value *= pj[3]/mass;
-    for (int j=0; j<3; j++) value -= pj[j]/mass*d_pjk_d_pTk(kZ, kferm, fsrindex, j);
+    value *= sum_pj[3]/mass;
+    for (int j=0; j<3; j++) value -= sum_pj[j]/mass*d_pjk_d_pTk(kZ, kferm, fsrindex, j);
   }
   return value;
 }
@@ -2327,6 +2339,11 @@ Double_t HiggsMassConstraint::getRefittedMassError(Int_t imass) const{ // imass=
         Int_t ipt = 6*(2*iZ+iferm)+3*ifsr+0;
         Int_t ilambda = 6*(2*iZ+iferm)+3*ifsr+1;
         Int_t iphi = 6*(2*iZ+iferm)+3*ifsr+2;
+
+        Double_t d_m_d_pTk_ival = d_m123_d_pTk(imass, iZ, iferm, ifsr);
+        Double_t d_m_d_lambdak_ival = d_m123_d_lambdak(imass, iZ, iferm, ifsr);
+        Double_t d_m_d_phik_ival = d_m123_d_phik(imass, iZ, iferm, ifsr);
+
         for (int jZ=0; jZ<2; jZ++){
           for (int jferm=0; jferm<2; jferm++){
             for (int jfsr=0; jfsr<2; jfsr++){
@@ -2334,15 +2351,19 @@ Double_t HiggsMassConstraint::getRefittedMassError(Int_t imass) const{ // imass=
               Int_t jlambda = 6*(2*jZ+jferm)+3*jfsr+1;
               Int_t jphi = 6*(2*jZ+jferm)+3*jfsr+2;
 
-              value += (fitCovMatrix[ipt][jpt])*d_m123_d_pTk(imass, iZ, iferm, ifsr)*d_m123_d_pTk(imass, jZ, jferm, jfsr);
-              value += (fitCovMatrix[ipt][jlambda])*d_m123_d_pTk(imass, iZ, iferm, ifsr)*d_m123_d_lambdak(imass, jZ, jferm, jfsr);
-              value += (fitCovMatrix[ipt][jphi])*d_m123_d_pTk(imass, iZ, iferm, ifsr)*d_m123_d_phik(imass, jZ, jferm, jfsr);
-              value += (fitCovMatrix[ilambda][jpt])*d_m123_d_lambdak(imass, iZ, iferm, ifsr)*d_m123_d_pTk(imass, jZ, jferm, jfsr);
-              value += (fitCovMatrix[ilambda][jlambda])*d_m123_d_lambdak(imass, iZ, iferm, ifsr)*d_m123_d_lambdak(imass, jZ, jferm, jfsr);
-              value += (fitCovMatrix[ilambda][jphi])*d_m123_d_lambdak(imass, iZ, iferm, ifsr)*d_m123_d_phik(imass, jZ, jferm, jfsr);
-              value += (fitCovMatrix[iphi][jpt])*d_m123_d_phik(imass, iZ, iferm, ifsr)*d_m123_d_pTk(imass, jZ, jferm, jfsr);
-              value += (fitCovMatrix[iphi][jlambda])*d_m123_d_phik(imass, iZ, iferm, ifsr)*d_m123_d_lambdak(imass, jZ, jferm, jfsr);
-              value += (fitCovMatrix[iphi][jphi])*d_m123_d_phik(imass, iZ, iferm, ifsr)*d_m123_d_phik(imass, jZ, jferm, jfsr);
+              Double_t d_m_d_pTk_jval = d_m123_d_pTk(imass, jZ, jferm, jfsr);
+              Double_t d_m_d_lambdak_jval = d_m123_d_lambdak(imass, jZ, jferm, jfsr);
+              Double_t d_m_d_phik_jval = d_m123_d_phik(imass, jZ, jferm, jfsr);
+
+              value += (fitCovMatrix[ipt][jpt]) * d_m_d_pTk_ival * d_m_d_pTk_jval;
+              value += (fitCovMatrix[ipt][jlambda]) * d_m_d_pTk_ival * d_m_d_lambdak_jval;
+              value += (fitCovMatrix[ipt][jphi]) * d_m_d_pTk_ival * d_m_d_phik_jval;
+              value += (fitCovMatrix[ilambda][jpt]) * d_m_d_lambdak_ival * d_m_d_pTk_jval;
+              value += (fitCovMatrix[ilambda][jlambda]) * d_m_d_lambdak_ival * d_m_d_lambdak_jval;
+              value += (fitCovMatrix[ilambda][jphi]) * d_m_d_lambdak_ival * d_m_d_phik_jval;
+              value += (fitCovMatrix[iphi][jpt]) * d_m_d_phik_ival * d_m_d_pTk_jval;
+              value += (fitCovMatrix[iphi][jlambda]) * d_m_d_phik_ival * d_m_d_lambdak_jval;
+              value += (fitCovMatrix[iphi][jphi]) * d_m_d_phik_ival * d_m_d_phik_jval;
             }
           }
         }
