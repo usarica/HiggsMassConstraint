@@ -11,18 +11,18 @@ RooGaussianMomConstraint::RooGaussianMomConstraint(
   const RooArgList& means_,
   const RooArgList& matrixElement_,
   RooGaussianMomConstraint::CoordinateSystem coordinates_,
-  Int_t fixCode_
+  RooGaussianMomConstraint::VerbosityLevel verbosity_
   ) : RooAbsPdf(name, title),
 
   variables("variables", "List of variables", this),
   means("means", "List of means", this),
   matrixElement("matrixElement", "List of inverse covariance matrix elements", this),
-  coordinates(coordinates_)
+  coordinates(coordinates_),
+  verbosity(verbosity_)
 {
   setProxyList(variables_, variables, 3);
   setProxyList(means_, means, 3);
   setProxyList(matrixElement_, matrixElement, 3*3);
-  fixVariable(fixCode_);
 }
 
 
@@ -31,23 +31,14 @@ variables("variables", "List of variables", this),
 means("means", "List of means", this),
 matrixElement("matrixElement", "List of inverse covariance matrix elements", this),
 coordinates(other.coordinates),
-fixCode(other.fixCode)
+verbosity(other.verbosity)
 {
   setProxyList(other.variables, variables, 3);
   setProxyList(other.means, means, 3);
   setProxyList(other.matrixElement, matrixElement, 3*3);
 }
 
-void RooGaussianMomConstraint::fixVariable(Int_t code){
-  fixCode=1;
-  if ((code%prime_var1)==0)fixCode*=prime_var1;
-  if ((code%prime_var2)==0)fixCode*=prime_var2;
-  if ((code%prime_var3)==0)fixCode*=prime_var3;
-  if ((code%prime_mean1)==0)fixCode*=prime_mean1;
-  if ((code%prime_mean2)==0)fixCode*=prime_mean2;
-  if ((code%prime_mean3)==0)fixCode*=prime_mean3;
-}
-
+void RooGaussianMomConstraint::setVerbosity(RooGaussianMomConstraint::VerbosityLevel verbosity_){ verbosity=verbosity_; }
 
 void RooGaussianMomConstraint::setProxyList(const RooArgList& args, RooListProxy& target, Int_t checkDim){
   TIterator* argIter = args.createIterator();
@@ -87,65 +78,64 @@ Double_t RooGaussianMomConstraint::computeGaussian(const Int_t code) const{ // T
 
 
 Double_t RooGaussianMomConstraint::evaluate() const{
-#if rmg_debug==1
-  cout << "Begin RooGaussianMomConstraint::evaluate in PDF " << GetName() << endl;
-#endif
+  if (verbosity==RooGaussianMomConstraint::kVerbose)
+    cout << "Begin RooGaussianMomConstraint::evaluate in PDF " << GetName() << endl;
+
   Double_t result = computeGaussian(1);
-#if rmg_debug==1
-  cout << "End RooGaussianMomConstraint::evaluate in PDF " << GetName() << '\n' << endl;
-#endif
+  if (verbosity==RooGaussianMomConstraint::kVerbose)
+    cout << "End RooGaussianMomConstraint::evaluate in PDF " << GetName() << '\n' << endl;
+
   return result;
 }
 
 Double_t RooGaussianMomConstraint::analyticalIntegral(Int_t code, const char* /*rangeName*/) const{
-#if rmg_debug==1
-  cout << "Begin RooGaussianMomConstraint::analyticalIntegral in PDF " << GetName() << endl;
-#endif
+  if (verbosity==RooGaussianMomConstraint::kVerbose)
+    cout << "Begin RooGaussianMomConstraint::analyticalIntegral in PDF " << GetName() << endl;
+
   Double_t result = computeGaussian(code);
-#if rmg_debug==1
-  cout << "End RooGaussianMomConstraint::analyticalIntegral in PDF " << GetName() << '\n' << endl;
-#endif
+  if (verbosity==RooGaussianMomConstraint::kVerbose)
+    cout << "End RooGaussianMomConstraint::analyticalIntegral in PDF " << GetName() << '\n' << endl;
+
   return result;
 }
 
 Int_t RooGaussianMomConstraint::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* /*rangeName*/) const{
   Int_t code = 1;
 
-#if rmg_debug==1
-  cout << "Begin RooGaussianMomConstraint::getAnalyticalIntegral." << endl;
-  cout << "\tInitial allVars : " << endl;
-  allVars.Print("v");
-  cout << "\tInitial analVars: " << endl;
-  analVars.Print("v");
-  cout << "\tFixing code: " << fixCode << endl;
-#endif
+  if (verbosity==RooGaussianMomConstraint::kVerbose){
+    cout << "Begin RooGaussianMomConstraint::getAnalyticalIntegral." << endl;
+    cout << "\tInitial allVars : " << endl;
+    allVars.Print("v");
+    cout << "\tInitial analVars: " << endl;
+    analVars.Print("v");
+  }
 
   if (coordinates==RooGaussianMomConstraint::kXYZ){
-    if ((fixCode%prime_var1)!=0 && matchArgs(allVars, analVars, RooArgSet(*(variables.at(0))))) code *= prime_var1;
-    //else if ((fixCode%prime_var2)!=0 && matchArgs(allVars, analVars, RooArgSet(*(variables.at(1))))) code *= prime_var2;
-    //else if ((fixCode%prime_var3)!=0 && matchArgs(allVars, analVars, RooArgSet(*(variables.at(2))))) code *= prime_var3;
-    else if ((fixCode%prime_mean1)!=0 && matchArgs(allVars, analVars, RooArgSet(*(means.at(0))))) code *= prime_mean1;
-    //else if ((fixCode%prime_mean2)!=0 && matchArgs(allVars, analVars, RooArgSet(*(means.at(1))))) code *= prime_mean2;
-    //else if ((fixCode%prime_mean3)!=0 && matchArgs(allVars, analVars, RooArgSet(*(means.at(2))))) code *= prime_mean3;
+    if (matchArgs(allVars, analVars, RooArgSet(*(variables.at(0))))) code *= prime_var1;
+    //else if (matchArgs(allVars, analVars, RooArgSet(*(variables.at(1))))) code *= prime_var2;
+    //else if (matchArgs(allVars, analVars, RooArgSet(*(variables.at(2))))) code *= prime_var3;
+    else if (matchArgs(allVars, analVars, RooArgSet(*(means.at(0))))) code *= prime_mean1;
+    //else if (matchArgs(allVars, analVars, RooArgSet(*(means.at(1))))) code *= prime_mean2;
+    //else if (matchArgs(allVars, analVars, RooArgSet(*(means.at(2))))) code *= prime_mean3;
   }
   else if (coordinates==RooGaussianMomConstraint::kRhoLambdaPhi){
-    if ((fixCode%prime_var1)!=0 && matchArgs(allVars, analVars, RooArgSet(*(variables.at(0))))) code *= prime_var1;
-    //else if ((fixCode%prime_var2)!=0 && matchArgs(allVars, analVars, RooArgSet(*(variables.at(1))))) code *= prime_var2; // No analytical integration over lambda possible; an implementation of Erf with complex arguments is needed!
-    //else if ((fixCode%prime_var3)!=0 && matchArgs(allVars, analVars, RooArgSet(*(variables.at(2))))) code *= prime_var3;
-    else if ((fixCode%prime_mean1)!=0 && matchArgs(allVars, analVars, RooArgSet(*(means.at(0))))) code *= prime_mean1;
-    //else if ((fixCode%prime_mean2)!=0 && matchArgs(allVars, analVars, RooArgSet(*(means.at(1))))) code *= prime_mean2; // No analytical integration over lambda possible; an implementation of Erf with complex arguments is needed!
-    //else if ((fixCode%prime_mean3)!=0 && matchArgs(allVars, analVars, RooArgSet(*(means.at(2))))) code *= prime_mean3;
+    if (matchArgs(allVars, analVars, RooArgSet(*(variables.at(0))))) code *= prime_var1;
+    //else if (matchArgs(allVars, analVars, RooArgSet(*(variables.at(1))))) code *= prime_var2; // No analytical integration over lambda possible; an implementation of Erf with complex arguments is needed!
+    //else if (matchArgs(allVars, analVars, RooArgSet(*(variables.at(2))))) code *= prime_var3;
+    else if (matchArgs(allVars, analVars, RooArgSet(*(means.at(0))))) code *= prime_mean1;
+    //else if (matchArgs(allVars, analVars, RooArgSet(*(means.at(1))))) code *= prime_mean2; // No analytical integration over lambda possible; an implementation of Erf with complex arguments is needed!
+    //else if (matchArgs(allVars, analVars, RooArgSet(*(means.at(2))))) code *= prime_mean3;
   }
   if (code==1) code=0;
 
-#if rmg_debug==1
-  cout << "\tFinal allVars: " << endl;
-  allVars.Print("v");
-  cout << "\tFinal analVars: " << endl;
-  analVars.Print("v");
-  cout << "\tCode: " << code << endl;
-  cout << "End RooGaussianMomConstraint::getAnalyticalIntegral." << endl;
-#endif
+  if (verbosity==RooGaussianMomConstraint::kVerbose){
+    cout << "\tFinal allVars: " << endl;
+    allVars.Print("v");
+    cout << "\tFinal analVars: " << endl;
+    analVars.Print("v");
+    cout << "\tCode: " << code << endl;
+    cout << "End RooGaussianMomConstraint::getAnalyticalIntegral." << endl;
+  }
 
   return code;
 }
@@ -154,56 +144,55 @@ Int_t RooGaussianMomConstraint::getAnalyticalIntegral(RooArgSet& allVars, RooArg
 Double_t RooGaussianMomConstraint::computeCaseXYZ(const Int_t code) const{ // The code can be either for var1, 2 or 3, but it can only be for one of them.
   Int_t intVar=-1;
   const int nDims=1;
-  if ((code%prime_var1)==0)intVar=0;
-  else if ((code%prime_var2)==0)intVar=1;
-  else if ((code%prime_var3)==0)intVar=2;
-  else if ((code%prime_mean1)==0)intVar=3;
-  else if ((code%prime_mean2)==0)intVar=4;
-  else if ((code%prime_mean3)==0)intVar=5;
-
-#if rmg_debug==1
-  cout << "Begin RooGaussianMomConstraint::computeCaseXYZ with fixCode = " << fixCode << ", code = " << code << " and intVar = " << intVar << endl;
-#endif
+  if (code>0){
+    if ((code%prime_var1)==0)intVar=0;
+    else if ((code%prime_var2)==0)intVar=1;
+    else if ((code%prime_var3)==0)intVar=2;
+    else if ((code%prime_mean1)==0)intVar=3;
+    else if ((code%prime_mean2)==0)intVar=4;
+    else if ((code%prime_mean3)==0)intVar=5;
+  }
+  if (verbosity==RooGaussianMomConstraint::kVerbose)
+    cout << "Begin RooGaussianMomConstraint::computeCaseXYZ with code = " << code << " and intVar = " << intVar << endl;
 
   Double_t value=0;
   if (intVar<0){ // Just do regular computation
     const Double_t epsilon = 1e-15;
 
-#if rmg_debug==1
-    cout << "RooGaussianMomConstraint::computeCaseXYZ case 0" << endl;
-#endif
+    if (verbosity==RooGaussianMomConstraint::kVerbose)
+      cout << "RooGaussianMomConstraint::computeCaseXYZ case 0" << endl;
 
     for (int ix=0; ix<nDims; ix++){
       /*
       if (
-        (((fixCode%prime_var1)==0 || (fixCode%prime_mean1)==0) && ix==0) ||
-        (((fixCode%prime_var2)==0 || (fixCode%prime_mean2)==0) && ix==1) ||
-        (((fixCode%prime_var3)==0 || (fixCode%prime_mean3)==0) && ix==2)
-        ) continue;
+      (((fixCode%prime_var1)==0 || (fixCode%prime_mean1)==0) && ix==0) ||
+      (((fixCode%prime_var2)==0 || (fixCode%prime_mean2)==0) && ix==1) ||
+      (((fixCode%prime_var3)==0 || (fixCode%prime_mean3)==0) && ix==2)
+      ) continue;
       */
       Double_t val_ix = dynamic_cast<const RooRealVar*>(variables.at(ix))->getVal();
       Double_t valbar_ix = dynamic_cast<const RooRealVar*>(means.at(ix))->getVal();
       Double_t diff_ix=val_ix-valbar_ix;
 
-#if rmg_debug==1
-      cout << "ix = " << ix << endl;
-      cout << "x, xb = " << val_ix << " " << valbar_ix << endl;
-#endif
+      if (verbosity==RooGaussianMomConstraint::kVerbose){
+        cout << "ix = " << ix << endl;
+        cout << "x, xb = " << val_ix << " " << valbar_ix << endl;
+      }
 
       for (int iy=0; iy<nDims; iy++){
         /*
         if (
-          (((fixCode%prime_var1)==0 || (fixCode%prime_mean1)==0) && iy==0) ||
-          (((fixCode%prime_var2)==0 || (fixCode%prime_mean2)==0) && iy==1) ||
-          (((fixCode%prime_var3)==0 || (fixCode%prime_mean3)==0) && iy==2)
-          ) continue;
+        (((fixCode%prime_var1)==0 || (fixCode%prime_mean1)==0) && iy==0) ||
+        (((fixCode%prime_var2)==0 || (fixCode%prime_mean2)==0) && iy==1) ||
+        (((fixCode%prime_var3)==0 || (fixCode%prime_mean3)==0) && iy==2)
+        ) continue;
         */
         Double_t invCovMat = dynamic_cast<const RooRealVar*>(matrixElement.at(3*ix+iy))->getVal();
 
-#if rmg_debug==1
-        cout << "iy = " << iy << endl;
-        cout << "invCovMat(ix, iy) = " << invCovMat << endl;
-#endif
+        if (verbosity==RooGaussianMomConstraint::kVerbose){
+          cout << "iy = " << iy << endl;
+          cout << "invCovMat(ix, iy) = " << invCovMat << endl;
+        }
 
         if (invCovMat!=0.){
           Double_t val_iy = dynamic_cast<const RooRealVar*>(variables.at(iy))->getVal();
@@ -211,29 +200,25 @@ Double_t RooGaussianMomConstraint::computeCaseXYZ(const Int_t code) const{ // Th
           Double_t diff_iy=val_iy-valbar_iy;
           value += -0.5*invCovMat*diff_ix*diff_iy;
 
-#if rmg_debug==1
-          cout << "y, yb = " << val_iy << " " << valbar_iy << endl;
-#endif
+          if (verbosity==RooGaussianMomConstraint::kVerbose)
+            cout << "y, yb = " << val_iy << " " << valbar_iy << endl;
         }
-#if rmg_debug==1
-        cout << endl;
-#endif
+        if (verbosity==RooGaussianMomConstraint::kVerbose)
+          cout << endl;
       }
     }
     value = exp(value);
 
-#if rmg_debug==1
-    cout << "RooGaussianMomConstraint::computeCaseXYZ intVar==" << intVar << " result=" << value << " epsilon=" << epsilon << endl;
-#endif
+    if (verbosity==RooGaussianMomConstraint::kVerbose)
+      cout << "RooGaussianMomConstraint::computeCaseXYZ intVar==" << intVar << " result=" << value << " epsilon=" << epsilon << endl;
 
     if (!(value==value) || value<epsilon) return epsilon;
   }
   else{
     const Double_t epsilon = 1e-10;
 
-#if rmg_debug==1
-    cout << "RooGaussianMomConstraint::computeCaseXYZ case 1" << endl;
-#endif
+    if (verbosity==RooGaussianMomConstraint::kVerbose)
+      cout << "RooGaussianMomConstraint::computeCaseXYZ case 1" << endl;
 
     Int_t intVarpr=intVar%3;
     //Double_t xmin, xmax, y, z, xb, yb, zb, dxmax, dxmin, dy, dz;
@@ -261,33 +246,34 @@ Double_t RooGaussianMomConstraint::computeCaseXYZ(const Int_t code) const{ // Th
     //dz = z-zb;
     dy=0; dz=0;
 
-#if rmg_debug==1
-    cout << "xb, xmax, xmin = " << xb << ", " << xmax << ", " << xmin << endl;
-    //cout << "y, yb = " << y << ", " << yb << endl;
-    //cout << "z, zb = " << z << ", " << zb << endl;
-#endif
-    
+    if (verbosity==RooGaussianMomConstraint::kVerbose){
+      cout << "xb, xmax, xmin = " << xb << ", " << xmax << ", " << xmin << endl;
+      //cout << "y, yb = " << y << ", " << yb << endl;
+      //cout << "z, zb = " << z << ", " << zb << endl;
+    }
+
     Double_t invCovMat[3][3]={ { 0 } };
     for (int ix=0; ix<nDims; ix++){
       Int_t rx = ((intVarpr+ix)%3);
       /*
       if (
-        (((fixCode%prime_var1)==0 || (fixCode%prime_mean1)==0) && rx==0) ||
-        (((fixCode%prime_var2)==0 || (fixCode%prime_mean2)==0) && rx==1) ||
-        (((fixCode%prime_var3)==0 || (fixCode%prime_mean3)==0) && rx==2)
-        ) continue;
+      (((fixCode%prime_var1)==0 || (fixCode%prime_mean1)==0) && rx==0) ||
+      (((fixCode%prime_var2)==0 || (fixCode%prime_mean2)==0) && rx==1) ||
+      (((fixCode%prime_var3)==0 || (fixCode%prime_mean3)==0) && rx==2)
+      ) continue;
       */
       for (int iy=0; iy<nDims; iy++){
         Int_t ry = ((intVarpr+iy)%3);
+        /*
         if (
           (((fixCode%prime_var1)==0 || (fixCode%prime_mean1)==0) && ry==0) ||
           (((fixCode%prime_var2)==0 || (fixCode%prime_mean2)==0) && ry==1) ||
           (((fixCode%prime_var3)==0 || (fixCode%prime_mean3)==0) && ry==2)
           ) continue;
+        */
         invCovMat[rx][ry] = dynamic_cast<const RooRealVar*>(matrixElement.at(3*rx+ry))->getVal();
-#if rmg_debug==1
-        cout << "invCovMat(" << rx << ", " << ry << ") = " << invCovMat[rx][ry] << endl;
-#endif
+        if (verbosity==RooGaussianMomConstraint::kVerbose)
+          cout << "invCovMat(" << rx << ", " << ry << ") = " << invCovMat[rx][ry] << endl;
       }
     }
 
@@ -305,9 +291,8 @@ Double_t RooGaussianMomConstraint::computeCaseXYZ(const Int_t code) const{ // Th
         - Erf((invCovMat[0][0]*dxmin + offxdiff)/sqrt(2.*invCovMat[0][0]))
         );
 
-#if rmg_debug==1
-      cout << "RooGaussianMomConstraint::computeCaseXYZ case 1 exponent=" << exponent << " value=" << value << endl;
-#endif
+      if (verbosity==RooGaussianMomConstraint::kVerbose)
+        cout << "RooGaussianMomConstraint::computeCaseXYZ case 1 exponent=" << exponent << " value=" << value << endl;
     }
     else if (fabs(offxdiff)>tolerance){
       value =
@@ -317,9 +302,8 @@ Double_t RooGaussianMomConstraint::computeCaseXYZ(const Int_t code) const{ // Th
         exp(-offxdiff*dxmin) - exp(-offxdiff*dxmax)
         )/offxdiff;
 
-#if rmg_debug==1
-      cout << "RooGaussianMomConstraint::computeCaseXYZ case 2 value=" << value << endl;
-#endif
+      if (verbosity==RooGaussianMomConstraint::kVerbose)
+        cout << "RooGaussianMomConstraint::computeCaseXYZ case 2 value=" << value << endl;
     }
     else{
       value =
@@ -327,46 +311,43 @@ Double_t RooGaussianMomConstraint::computeCaseXYZ(const Int_t code) const{ // Th
         -0.5*diffothers
         )*(xmax-xmin);
 
-#if rmg_debug==1
-      cout << "RooGaussianMomConstraint::computeCaseXYZ case 3 value=" << value << endl;
-#endif
+      if (verbosity==RooGaussianMomConstraint::kVerbose)
+        cout << "RooGaussianMomConstraint::computeCaseXYZ case 3 value=" << value << endl;
     }
 
-#if rmg_debug==1
-    cout << "RooGaussianMomConstraint::computeCaseXYZ code " << code << " with result " << value << endl;
-#endif
+    if (verbosity==RooGaussianMomConstraint::kVerbose)
+      cout << "RooGaussianMomConstraint::computeCaseXYZ code " << code << " with result " << value << endl;
 
     if (!(value==value) || value<epsilon) return epsilon;
   }
 
-#if rmg_debug==1
-  cout << "End RooGaussianMomConstraint::computeCaseXYZ with result " << value << endl;
-#endif
+  if (verbosity==RooGaussianMomConstraint::kVerbose)
+    cout << "End RooGaussianMomConstraint::computeCaseXYZ with result " << value << endl;
 
   return value;
 }
 Double_t RooGaussianMomConstraint::computeCaseRhoLambdaPhi(const Int_t code) const{ // The code can be either for var1, (not)2 or 3, but it can only be for one of them.
   Int_t intVar=-1;
   const int nDims=1;
-  if ((code%prime_var1)==0)intVar=0;
-  //else if ((code%prime_var2)==0)intVar=1; // No idea how to implement integration over the Lambda coordinate.
-  else if ((code%prime_var2)==0){ cerr << "RooGaussianMomConstraint::computeCaseRhoLambdaPhi: Something went terribly wrong! code%prime_var2==0 should not have happened!" << endl; assert(0); }
-  else if ((code%prime_var3)==0)intVar=2;
-  else if ((code%prime_mean1)==0)intVar=3;
-  //else if ((code%prime_mean2)==0)intVar=4; // No idea how to implement integration over the Lambda coordinate.
-  else if ((code%prime_mean2)==0){ cerr << "RooGaussianMomConstraint::computeCaseRhoLambdaPhi: Something went terribly wrong! code%prime_mean2==0 should not have happened!" << endl; assert(0); }
-  else if ((code%prime_mean3)==0)intVar=5;
+  if (code>0){
+    if ((code%prime_var1)==0)intVar=0;
+    //else if ((code%prime_var2)==0)intVar=1; // No idea how to implement integration over the Lambda coordinate.
+    else if ((code%prime_var2)==0){ cerr << "RooGaussianMomConstraint::computeCaseRhoLambdaPhi: Something went terribly wrong! code%prime_var2==0 should not have happened!" << endl; assert(0); }
+    else if ((code%prime_var3)==0)intVar=2;
+    else if ((code%prime_mean1)==0)intVar=3;
+    //else if ((code%prime_mean2)==0)intVar=4; // No idea how to implement integration over the Lambda coordinate.
+    else if ((code%prime_mean2)==0){ cerr << "RooGaussianMomConstraint::computeCaseRhoLambdaPhi: Something went terribly wrong! code%prime_mean2==0 should not have happened!" << endl; assert(0); }
+    else if ((code%prime_mean3)==0)intVar=5;
+  }
 
-#if rmg_debug==1
-  cout << "Begin RooGaussianMomConstraint::computeCaseRhoLambdaPhi with fixCode = " << fixCode << ", code = " << code << " and intVar = " << intVar << endl;
-#endif
+  if (verbosity==RooGaussianMomConstraint::kVerbose)
+    cout << "Begin RooGaussianMomConstraint::computeCaseRhoLambdaPhi with code = " << code << " and intVar = " << intVar << endl;
 
   Double_t value=0;
   const Double_t epsilon = 1e-10;
   if (intVar<0 || (code%prime_var2)==0 || (code%prime_mean2)==0){ // Only extra term is (Rho Sec[Lambda])^2, so numerical value with either no integration or integration over Phi is unchanged other than this "constant" value.
-#if rmg_debug==1
-    cout << "RooGaussianMomConstraint::computeCaseRhoLambdaPhi case 0" << endl;
-#endif
+    if (verbosity==RooGaussianMomConstraint::kVerbose)
+      cout << "RooGaussianMomConstraint::computeCaseRhoLambdaPhi case 0" << endl;
 
     value = computeCaseXYZ(code); // Just do regular computation
 
@@ -383,10 +364,10 @@ Double_t RooGaussianMomConstraint::computeCaseRhoLambdaPhi(const Int_t code) con
     else jacobian /= pow(cos(y), 2);
     value *= jacobian;
 
-#if rmg_debug==1
-    cout << "RooGaussianMomConstraint::computeCaseRhoLambdaPhi x, y, jacobian " << x << ", " << y << ", " << jacobian << endl;
-    cout << "RooGaussianMomConstraint::computeCaseRhoLambdaPhi code " << code << " with result " << value << endl;
-#endif
+    if (verbosity==RooGaussianMomConstraint::kVerbose){
+      cout << "RooGaussianMomConstraint::computeCaseRhoLambdaPhi x, y, jacobian " << x << ", " << y << ", " << jacobian << endl;
+      cout << "RooGaussianMomConstraint::computeCaseRhoLambdaPhi code " << code << " with result " << value << endl;
+    }
 
     if (!(value==value) || value<epsilon) value = epsilon;
     return value;
@@ -395,9 +376,8 @@ Double_t RooGaussianMomConstraint::computeCaseRhoLambdaPhi(const Int_t code) con
 
   Int_t intVarpr=intVar%3;
   if (intVarpr==0){ // Integration over cylindrical Rho is different wrt. how it would have been in the XYZ coordinates.
-#if rmg_debug==1
-    cout << "RooGaussianMomConstraint::computeCaseRhoLambdaPhi case 1" << endl;
-#endif
+    if (verbosity==RooGaussianMomConstraint::kVerbose)
+      cout << "RooGaussianMomConstraint::computeCaseRhoLambdaPhi case 1" << endl;
 
     //Double_t xmin, xmax, y, z, xb, yb, zb, dxmax, dxmin, dy, dz;
     Double_t xmin, xmax, y, xb, dxmax, dxmin, dy, dz;
@@ -424,27 +404,31 @@ Double_t RooGaussianMomConstraint::computeCaseRhoLambdaPhi(const Int_t code) con
     //dz = z-zb;
     y=0; dy=0; dz=0;
 
-#if rmg_debug==1
-    cout << "xb, xmax, xmin = " << xb << ", " << xmax << ", " << xmin << endl;
-    //cout << "y, yb = " << y << ", " << yb << endl;
-    //cout << "z, zb = " << z << ", " << zb << endl;
-#endif
+    if (verbosity==RooGaussianMomConstraint::kVerbose){
+      cout << "xb, xmax, xmin = " << xb << ", " << xmax << ", " << xmin << endl;
+      //cout << "y, yb = " << y << ", " << yb << endl;
+      //cout << "z, zb = " << z << ", " << zb << endl;
+    }
 
     Double_t invCovMat[3][3]={ { 0 } };
     for (int ix=0; ix<nDims; ix++){
       Int_t rx = ((intVarpr+ix)%3);
+      /*
       if (
         (((fixCode%prime_var1)==0 || (fixCode%prime_mean1)==0) && rx==0) ||
         (((fixCode%prime_var2)==0 || (fixCode%prime_mean2)==0) && rx==1) ||
         (((fixCode%prime_var3)==0 || (fixCode%prime_mean3)==0) && rx==2)
         ) continue;
+      */
       for (int iy=0; iy<nDims; iy++){
         Int_t ry = ((intVarpr+iy)%3);
+        /*
         if (
           (((fixCode%prime_var1)==0 || (fixCode%prime_mean1)==0) && ry==0) ||
           (((fixCode%prime_var2)==0 || (fixCode%prime_mean2)==0) && ry==1) ||
           (((fixCode%prime_var3)==0 || (fixCode%prime_mean3)==0) && ry==2)
           ) continue;
+        */
         invCovMat[rx][ry] = dynamic_cast<const RooRealVar*>(matrixElement.at(3*rx+ry))->getVal();
       }
     }
@@ -493,15 +477,14 @@ Double_t RooGaussianMomConstraint::computeCaseRhoLambdaPhi(const Int_t code) con
     else value /= pow(cos(y), 2);
   }
 
-#if rmg_debug==1
-  cout << "RooGaussianMomConstraint::computeCaseRhoLambdaPhi code " << code << " with result " << value << endl;
-#endif
+  if (verbosity==RooGaussianMomConstraint::kVerbose)
+    cout << "RooGaussianMomConstraint::computeCaseRhoLambdaPhi code " << code << " with result " << value << endl;
 
   if (!(value==value) || value<epsilon) value = epsilon;
 
-#if rmg_debug==1
-  cout << "End RooGaussianMomConstraint::computeCaseRhoLambdaPhi with result " << value << endl;
-#endif
+  if (verbosity==RooGaussianMomConstraint::kVerbose)
+    cout << "End RooGaussianMomConstraint::computeCaseRhoLambdaPhi with result " << value << endl;
+
   return value;
 }
 

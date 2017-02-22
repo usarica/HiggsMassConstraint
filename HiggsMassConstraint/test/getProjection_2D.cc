@@ -238,6 +238,7 @@ void getProjection_2D_single_HVV(string gSet, string decaytype, string strprojva
 
       double* dim = new double[projvars.size()];
       double fcn = 0;
+      double spfcn0=0;
       double spfcn=0;
 
       TFile* foutput = TFile::Open(Form("H%sDecay_%sProjection_NoInterf_%s%s", decaytype.c_str(), outdir.Data(), strcoupl.c_str(), ".root"), "recreate");
@@ -245,6 +246,7 @@ void getProjection_2D_single_HVV(string gSet, string decaytype, string strprojva
       for (unsigned int iv=0; iv<projvars.size(); iv++) pointsTree->Branch(Form("d%i", (int)iv+1), &(dim[iv]));
       pointsTree->Branch("fcn", &fcn);
       pointsTree->Branch("spfcn", &spfcn);
+      pointsTree->Branch("spfcn0", &spfcn0);
 
       m12->setConstant(false);
       m12->setVal(mPOLE);
@@ -296,20 +298,24 @@ void getProjection_2D_single_HVV(string gSet, string decaytype, string strprojva
         Double_t manualIntegral=0;
         for (unsigned int iy=0; iy<ndim[1]; iy++){
           unsigned int ip = ix*ndim[1]+iy;
-          unsigned int ip_ypo = ip; if (iy<ndim[1]-1) ip++;
+          unsigned int ip_ypo = ip; if (iy<(ndim[1]-1)) ip_ypo++;
 
           dim[0] = points.at(ip)[0];
           dim[1] = points.at(ip)[1];
           fcn = points.at(ip)[2];
 
+          if (dim[0]==155.) cout << "Constructing the renormalized spline for point (x,y,fcn)=(" << dim[0] << ", " << dim[1] << ", " << fcn << ")" << endl;
+
           projvars.at(0)->setVal(dim[0]);
           projvars.at(1)->setVal(dim[1]);
 
-          spfcn = spPDF->getVal();
+          spfcn0 = spPDF->getVal();
+          spfcn = spfcn0;
           if (spPDFint!=0){
             double integral = spPDFint->getVal();
             spfcn /= integral;
             points.at(ip)[2] /= integral;
+            if (dim[0]==155.) cout << "\tIntegral: " << integral << endl;
           }
           pointsTree->Fill();
         }
@@ -330,8 +336,8 @@ void getProjection_2D_single_HVV(string gSet, string decaytype, string strprojva
       delete pointsTree;
 
       if (whichIsMH>=0){
-        //mPOLE = 155.36;
-        mPOLE = 155;
+        mPOLE = 155.36;
+        //mPOLE = 155;
         cout << "Plotting PDFs for central value " << mPOLE << endl;
         m12->setVal(mPOLE);
         m12->setConstant(true);
@@ -351,21 +357,20 @@ void getProjection_2D_single_HVV(string gSet, string decaytype, string strprojva
         plot->SetTitle(Form("Projection at mH=%.2f GeV", mPOLE));
         //spPDF->setVerbosity(RooNCSplinePdfCore::kVerbose);
         spPDF->plotOn(plot, LineColor(kRed), LineWidth(2));
-        pdf->plotOn(plot, LineColor(kBlack), LineWidth(2), LineStyle(2));
+        pdf->plotOn(plot, LineColor(kBlack), LineWidth(2), LineStyle(2), Project(intSet));
 
         m12->setConstant(false);
         mPOLE = (int)mPOLE;
         m12->setVal(mPOLE);
         m12->setConstant(true);
         cout << "Plotting PDF for edge value " << mPOLE << endl;
-        pdf->plotOn(plot, LineColor(kBlue), LineWidth(2), LineStyle(2));
+        pdf->plotOn(plot, LineColor(kBlue), LineWidth(2), LineStyle(2), Project(intSet));
         m12->setConstant(false);
         mPOLE = mPOLE+1.;
         m12->setVal(mPOLE);
         m12->setConstant(true);
         cout << "Plotting PDF for edge value " << mPOLE << endl;
-        pdf->plotOn(plot, LineColor(kGreen+2), LineWidth(2), LineStyle(2));
-
+        pdf->plotOn(plot, LineColor(kGreen+2), LineWidth(2), LineStyle(2), Project(intSet));
 
         TCanvas* canvas = new TCanvas(Form("c_%s", outdir.Data()), "", 800, 800);
         plot->Draw();

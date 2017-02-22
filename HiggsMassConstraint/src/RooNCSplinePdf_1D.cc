@@ -55,7 +55,7 @@ FcnList("FcnList", "List of function coordinates", this)
   coefIter = inFcnList.createIterator();
   while ((coef = (RooAbsArg*)coefIter->Next())){
     if (!dynamic_cast<RooAbsReal*>(coef)){
-      coutE(InputArguments) << "RooNCSplinePdf_1D ERROR::RooNCSplinePdf_1D(" << GetName() << ") Y variable " << coef->GetName() << " is not of type RooAbsReal" << endl;
+      coutE(InputArguments) << "RooNCSplinePdf_1D ERROR::RooNCSplinePdf_1D(" << GetName() << ") function variable " << coef->GetName() << " is not of type RooAbsReal" << endl;
       assert(0);
     }
     FcnList.add(*coef);
@@ -139,14 +139,14 @@ Double_t RooNCSplinePdf_1D::interpolateFcn(Int_t code, const char* rangeName)con
 
 void RooNCSplinePdf_1D::getKappa(vector<Double_t>& kappas, const Int_t /*whichDirection*/)const{
   kappas.clear();
-  Double_t kappa;
+  Double_t kappa=1;
 
   Int_t npoints;
   RooListProxy const* coord;
   npoints=npointsX;
   coord=&XList;
 
-  for (int j=0; j<npoints-1; j++){
+  for (Int_t j=0; j<npoints-1; j++){
     Double_t val_j = (dynamic_cast<RooAbsReal*>(coord->at(j)))->getVal();
     Double_t val_jpo = (dynamic_cast<RooAbsReal*>(coord->at(j+1)))->getVal();
     kappa = 1./(val_jpo-val_j);
@@ -157,17 +157,17 @@ void RooNCSplinePdf_1D::getKappa(vector<Double_t>& kappas, const Int_t /*whichDi
 Int_t RooNCSplinePdf_1D::getWhichBin(const Double_t& val, const Int_t /*whichDirection*/)const{
   Int_t bin=-1;
   Double_t valj, valjpo;
-  int npoints;
-  RooListProxy const* gridDir;
-  gridDir=&XList;
+  Int_t npoints;
+  RooListProxy const* coord;
+  coord=&XList;
   npoints=npointsX;
 
   if (npoints<=1) bin=0;
   else{
-    valjpo = (dynamic_cast<RooAbsReal*>(gridDir->at(0)))->getVal();
+    valjpo = (dynamic_cast<RooAbsReal*>(coord->at(0)))->getVal();
     for (Int_t j=0; j<npoints-1; j++){
-      valj = (dynamic_cast<RooAbsReal*>(gridDir->at(j)))->getVal();
-      valjpo = (dynamic_cast<RooAbsReal*>(gridDir->at(j+1)))->getVal();
+      valj = (dynamic_cast<RooAbsReal*>(coord->at(j)))->getVal();
+      valjpo = (dynamic_cast<RooAbsReal*>(coord->at(j+1)))->getVal();
       if (val<valjpo && val>=valj){ bin=j; break; }
     }
     if (bin==-1 && val>=valjpo) bin=npoints-2;

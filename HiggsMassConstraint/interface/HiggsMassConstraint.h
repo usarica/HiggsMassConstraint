@@ -26,8 +26,7 @@
 #include <ZZMatrixElement/MELA/interface/Mela.h>
 #include "ScalarPdfFactory_HVV_fast.h"
 #include "NCSplinePdfFactory_1D.h"
-#include "SlicePdfFactory.h"
-#include "RooSlicePdf.h"
+#include "NCSplinePdfFactory_2D.h"
 #include "RooRelBWProduct.h"
 #include "RooGaussianMomConstraint.h"
 #include "RooDiracDeltaFunction.h"
@@ -49,7 +48,7 @@
 
 
 #ifndef hmc_debug
-#define hmc_debug 0
+#define hmc_debug 1
 #endif
 #ifndef gauscheck
 #define gauscheck
@@ -81,6 +80,23 @@ namespace HMCtoolkit{
   const Int_t pdgUnknown=-99;
 
   template<typename varType> void deletePtr(varType* ptr){ if (ptr!=0) delete ptr; ptr=0; }
+
+  template<typename varType> void addByLowest(varType val, std::vector<varType>& valArray){
+    bool inserted = false;
+    for (typename std::vector<varType>::iterator it = valArray.begin(); it<valArray.end(); it++){
+      if (*it>val){
+        inserted=true;
+        valArray.insert(it, val);
+        break;
+      }
+    }
+    if (!inserted) valArray.push_back(val);
+  }
+
+  template<typename varType> void addUnique(varType val, std::vector<varType>& valArray){
+    for (typename std::vector<varType>::iterator it = valArray.begin(); it<valArray.end(); it++){ if (*it==val) return; }
+    valArray.push_back(val);
+  }
 }
 
 
@@ -195,6 +211,18 @@ public:
   // Get the integration graph
   void setFastIntegrationGraph(TString strfname, TString strtgname);
 
+  // Derivative functions to use in contracting final C(pT, lambda, phi) to sigma(m1), sigma(m2) or sigma(m12)
+  Double_t d_Ek_d_pTk(Int_t kZ, Int_t kferm, Int_t fsrindex) const;
+  Double_t d_pjk_d_pTk(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const;
+  Double_t d_Ek_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrindex) const;
+  Double_t d_pjk_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const;
+  Double_t d_Ek_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex) const;
+  Double_t d_pjk_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const;
+
+  Double_t d_m123_d_pTk(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const;
+  Double_t d_m123_d_lambdak(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const;
+  Double_t d_m123_d_phik(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const;
+
 protected:
 
   // Data members
@@ -230,8 +258,8 @@ protected:
   RooRealVar* varZero;
   RooRealVar* varOne;
 
+  RooRealVar* mManip[3];
   // Below, lambda = Pi/2 - theta
-
   RooRealVar* pT_ferm[2][2];
   RooRealVar* lambda_ferm[2][2];
   RooRealVar* phi_ferm[2][2];
@@ -291,10 +319,11 @@ protected:
   ScalarPdfFactory_HVV* hvvFactory;
   ScalarPdfFactory_HVV_fast* hvvFastFactory;
   TensorPdfFactory_ppHVV* xvvFactory;
-  std::vector<NCSplinePdfFactory_1D*> splineFactories;
-  SlicePdfFactory* slicePDFFactory;
+  NCSplinePdfFactory_2D* spline2DFactory;
+  NCSplinePdfFactory_1D* spline1DFactory;
+  std::vector<Double_t> splineCoord[2]; // m12, m1...
+
   RooSpin* spinPDF;
-  RooSlicePdf* slicePDF;
   // Fast propagator PDF
   RooRelBWProduct* bwProdPDF; // For fast PDF
   // Simplest PDF possible
@@ -324,14 +353,17 @@ protected:
   virtual void constructPdfFactory();
   virtual void destroyPdfFactory();
 
-  virtual void constructSplinePDFs();
-  virtual void destroySplinePDFs();
+  virtual void constructSplinePDF();
+  virtual void destroySplinePDF();
 
   virtual void constructConstraintPdfs();
   virtual void destroyConstraintPdfs();
 
   virtual void constructCompoundPdf();
   virtual void destroyCompoundPdf();
+
+  virtual void constructCompoundFastPdf();
+  virtual void destroyCompoundFastPdf();
 
   // Add the fermion-FSR pairs, FSR-being per-fermion. fitRetry=true prevents clearing of the protected objects container and allows another fit through different strategies in case the initial fit fails.
   void addDaughters(std::vector<pair<const reco::Candidate*, const pat::PFParticle*>>& FermionWithFSR, bool fitRetry=false); // To set the Lepton and photon arrays in a pair form. Pass null-pointer if the photon does not exist.
@@ -367,19 +399,6 @@ protected:
 
   bool standardOrderedFinalCovarianceMatrix(const RooArgList& pars); // Re-order the covariance matrix from the fit, expand as necessary
   Int_t fitParameterCorrespondance(RooRealVar* par);
-
-
-  // Derivative functions to use in contracting final C(pT, lambda, phi) to sigma(m1), sigma(m2) or sigma(m12)
-  Double_t d_Ek_d_pTk(Int_t kZ, Int_t kferm, Int_t fsrindex) const;
-  Double_t d_pjk_d_pTk(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const;
-  Double_t d_Ek_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrindex) const;
-  Double_t d_pjk_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const;
-  Double_t d_Ek_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex) const;
-  Double_t d_pjk_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const;
-
-  Double_t d_m123_d_pTk(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const;
-  Double_t d_m123_d_lambdak(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const;
-  Double_t d_m123_d_phik(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const;
 
 };
 

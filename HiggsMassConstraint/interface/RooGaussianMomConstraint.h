@@ -14,14 +14,13 @@
 #include <vector>
 #include "TMath.h"
 
-#ifndef rmg_debug
-#define rmg_debug 0
-#endif
-
 
 class RooGaussianMomConstraint : public RooAbsPdf {
 public:
-
+  enum VerbosityLevel{
+    kSilent,
+    kVerbose
+  };
   enum CoordinateSystem{
     kXYZ,
     kRhoLambdaPhi // == pT, Lambda, Phi
@@ -35,14 +34,14 @@ public:
     prime_mean3=13
   };
 
-  RooGaussianMomConstraint(){};
+  RooGaussianMomConstraint(){}
   RooGaussianMomConstraint(
     const char* name, const char* title,
     const RooArgList& variables_,
     const RooArgList& means_,
     const RooArgList& matrixElement_,
     RooGaussianMomConstraint::CoordinateSystem coordinates_=RooGaussianMomConstraint::kXYZ,
-    Int_t fixCode_=1
+    RooGaussianMomConstraint::VerbosityLevel verbosity_ = RooGaussianMomConstraint::kSilent
     );
   RooGaussianMomConstraint(const RooGaussianMomConstraint& other, const char* name=0);
   inline virtual ~RooGaussianMomConstraint(){}
@@ -53,7 +52,7 @@ public:
   virtual Double_t analyticalIntegral(Int_t code, const char* rangeName=0) const;
   virtual Double_t evaluate() const;
 
-  virtual void fixVariable(Int_t code);
+  void setVerbosity(RooGaussianMomConstraint::VerbosityLevel verbosity_);
 
 protected:
 
@@ -61,7 +60,7 @@ protected:
   RooListProxy means;
   RooListProxy matrixElement;
   RooGaussianMomConstraint::CoordinateSystem coordinates;
-  Int_t fixCode;
+  RooGaussianMomConstraint::VerbosityLevel verbosity;
 
   virtual void setProxyList(const RooArgList& args, RooListProxy& target, Int_t checkDim=-1);
 
