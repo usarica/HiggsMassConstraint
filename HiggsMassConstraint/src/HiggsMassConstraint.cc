@@ -38,7 +38,8 @@ HiggsMassConstraint::HiggsMassConstraint(
   Vdecay1(Vdecay1_),
   Vdecay2(Vdecay2_),
   X_spin(X_spin_),
-  intCodeStart(intCodeStart_)
+  intCodeStart(intCodeStart_),
+  fastPDF(0)
 {
   if (X_spin!=0 && X_spin!=2){
     cerr << "HiggsMassConstraint::HiggsMassConstraint: Only spin-0 or -2 are supported!" << endl;
@@ -56,7 +57,7 @@ HiggsMassConstraint::HiggsMassConstraint(
   constructVariables();
   setM1M2Cuts(); // Set default minimum cuts on m1, m2, mA, mB. Note that the cut targets are RooRealVars, so constructVariables needs to be called first!
   constructPdfFactory();
-  constructSplinePDFs();
+  constructSplinePDF();
   constructConstraintPdfs();
   constructCompoundPdf();
 }
@@ -64,7 +65,7 @@ HiggsMassConstraint::HiggsMassConstraint(
 HiggsMassConstraint::~HiggsMassConstraint(){
   destroyCompoundPdf();
   destroyConstraintPdfs();
-  destroySplinePDFs();
+  destroySplinePDF();
   destroyPdfFactory();
   destroyVariables();
 }
@@ -83,6 +84,9 @@ void HiggsMassConstraint::constructVariables(){
   m2highcut = new RooRealVar("m2highcut", "", sqrts, 0., sqrts);
   mFFOScut = new RooRealVar("mFFOScut", "", 0., 0., sqrts);
   mFFSScut = new RooRealVar("mFFSScut", "", 0., 0., sqrts);
+
+  for (int iZ=0; iZ<2; iZ++) mManip[iZ] = new RooRealVar(Form("m%i_manip", iZ+1), "", 0., 0., sqrts); // Special variables for spline manipulation
+  mManip[2] = new RooRealVar("m12_manip", "", 0., 0., sqrts);
 
   RooArgList m12_args;
   for (int iZ=0; iZ<2; iZ++){
@@ -326,48 +330,37 @@ void HiggsMassConstraint::constructPdfFactory(){
   }
 #endif
 }
-void HiggsMassConstraint::constructSplinePDFs(){
+void HiggsMassConstraint::constructSplinePDF(){
 #ifdef _hmcpkgpathstr_
   const string HMCPKGPATH = _hmcpkgpathstr_;
-  TFile* fin = TFile::Open(Form("%s/data/HZZ4lDecay_m1Projection_NoInterf_ghz1.root", HMCPKGPATH.c_str()), "read");
-  TTree* masses=(TTree*)fin->Get("masses");
-  double mass;
-  masses->SetBranchAddress("mH", &mass);
-  vector<TGraph*> tgs;
-  vector<Double_t> massarray;
-  double massmax=0;
-  for (int ev=0; ev<masses->GetEntries(); ev++){
-    masses->GetEntry(ev);
-    if (ev==masses->GetEntries()-1) massmax=mass;
-#if hmc_debug==1
-    cout << "HiggsMassConstraint::constructSplinePDFs: Acquiring tg(" << Form("tg_pdf_mH%.0f", mass) << ") for mH=" << mass << endl;
-#endif
-    TGraph* tg = (TGraph*)fin->Get(Form("tg_pdf_mH%.0f", mass));
-    if (tg!=0) tgs.push_back(tg);
-    else cout << "HiggsMassConstraint::constructSplinePDFs: Acquiring tg(" << Form("tg_pdf_mH%.0f", mass) << ") for mH=" << mass << " failed!" << endl;
-    massarray.push_back(mass);
+  TFile* fin = TFile::Open(Form("%s/data/HZZ4lDecay_m12_m1Projection_NoInterf_ghz1.root", HMCPKGPATH.c_str()), "read");
+  TTree* tin = (TTree*)fin->Get("points");
+  const unsigned  int ndim=2;
+  vector<doubleTriplet_t> points;
+  double fcn;
+  double dim[ndim]={ 0 };
+  tin->SetBranchAddress("spfcn", &fcn);
+  for (unsigned int idim=0; idim<ndim; idim++) tin->SetBranchAddress(Form("d%i", idim+1), dim+idim);
+  double massmax=0, massmin=1e5;
+  for (int ev=0; ev<tin->GetEntries(); ev++){
+    tin->GetEntry(ev);
+    points.push_back(doubleTriplet_t(dim[0], dim[1], fcn));
+    massmin = min(dim[0], massmin);
+    massmax = max(dim[0], massmax);
+    for (unsigned int ic=0; ic<2; ic++) addUnique(dim[ic], splineCoord[ic]);
   }
+
+  // Construct 2D spline factory and its PDF
+  spline2DFactory = new NCSplinePdfFactory_2D(mManip[2], mManip[0], "2D");
+  spline2DFactory->setPoints(points);
+  ((RooNCSplinePdfCore*)spline2DFactory->getPDF())->setVerbosity(RooNCSplinePdfCore::kVerbose);
   sqrts=min(massmax, sqrts);
+  mManip[2]->setRange(massmin, sqrts);
+  mManip[0]->setRange(splineCoord[1].at(0), splineCoord[1].at(splineCoord[1].size()-1));
   fin->Close();
-  if (tgs.size()!=0){
-    RooArgList pdfs;
-    RooArgList coefs;
-    RooArgList deps;
-    deps.add(*(m[0]));
-    for (unsigned int it=0; it<tgs.size(); it++){
-      if (tgs.at(it)!=0){
-        NCSplinePdfFactory_1D* spFactory = new NCSplinePdfFactory_1D(m[0], TString(tgs.at(it)->GetName()));
-        spFactory->setPoints(tgs.at(it));
-        pdfs.add(*(spFactory->getPDF()));
-        splineFactories.push_back(spFactory);
-        delete tgs.at(it);
-      }
-    }
-    SlicePdfFactory* slicePDFFactory = new SlicePdfFactory(m[2], deps, pdfs, coefs, "slicePDF");
-    slicePDFFactory->setXCoordinates(massarray);
-    slicePDF=slicePDFFactory->getPDF();
-  }
-  else{ cout << "HiggsMassConstraint::constructSplinePDFs: Something went wrong while constructing slicePDF." << endl; assert(0); }
+
+  // Construct 1D spline factory but not its PDF
+  spline1DFactory = new NCSplinePdfFactory_1D(m[0], "1D");
 #else
   cout << "HiggsMassConstraint::constructSplinePDFs: Package path is undefined! Please modify BuildFile.xml." << endl;
   assert(0);
@@ -385,12 +378,9 @@ void HiggsMassConstraint::constructConstraintPdfs(){
       means_ferm.add(*(lambdaobs_ferm[iZ][iferm]));
       means_ferm.add(*(phiobs_ferm[iZ][iferm]));
       for (int im=0; im<9; im++) me_ferm.add(*(invcov_ferm[iZ][iferm][im]));
-#ifndef gauscheck
       gausConstraintsPDF[iZ][iferm][0] = new RooGaussianMomConstraint(Form("gausConstraintsPDF_Z%iFermion%i", iZ+1, iferm+1), Form("gausConstraintsPDF_Z%iFermion%i", iZ+1, iferm+1), vars_ferm, means_ferm, me_ferm, RooGaussianMomConstraint::kRhoLambdaPhi);
-#else
-      gausConstraintsPDF[iZ][iferm][0] = new RooGaussian(Form("gausConstraintsPDF_Z%iFermion%i", iZ+1, iferm+1), Form("gausConstraintsPDF_Z%iFermion%i", iZ+1, iferm+1), *(pT_ferm[iZ][iferm]), *(pTobs_ferm[iZ][iferm]), *(invcov_ferm[iZ][iferm][0]));
-#endif
       if (iZ==0) constraints.add(*(gausConstraintsPDF[iZ][iferm][0]));
+      gausConstraintsPDF[iZ][iferm][0]->setVerbosity(RooGaussianMomConstraint::kVerbose);
 
       RooArgList vars_fsr, means_fsr, me_fsr;
       vars_fsr.add(*(pT_fsr[iZ][iferm]));
@@ -400,12 +390,9 @@ void HiggsMassConstraint::constructConstraintPdfs(){
       means_fsr.add(*(lambdaobs_fsr[iZ][iferm]));
       means_fsr.add(*(phiobs_fsr[iZ][iferm]));
       for (int im=0; im<9; im++) me_fsr.add(*(invcov_fsr[iZ][iferm][im]));
-#ifndef gauscheck
       gausConstraintsPDF[iZ][iferm][1] = new RooGaussianMomConstraint(Form("gausConstraintsPDF_Z%iFermion%iFSR", iZ+1, iferm+1), Form("gausConstraintsPDF_Z%iFermion%iFSR", iZ+1, iferm+1), vars_fsr, means_fsr, me_fsr, RooGaussianMomConstraint::kRhoLambdaPhi);
-#else
-      gausConstraintsPDF[iZ][iferm][1] = new RooGaussian(Form("gausConstraintsPDF_Z%iFermion%iFSR", iZ+1, iferm+1), Form("gausConstraintsPDF_Z%iFermion%iFSR", iZ+1, iferm+1), *(pT_fsr[iZ][iferm]), *(pTobs_fsr[iZ][iferm]), *(invcov_fsr[iZ][iferm][0]));
-#endif
       if (iZ==0) constraints.add(*(gausConstraintsPDF[iZ][iferm][1]));
+      gausConstraintsPDF[iZ][iferm][1]->setVerbosity(RooGaussianMomConstraint::kVerbose);
     }
   }
 
@@ -428,50 +415,13 @@ void HiggsMassConstraint::constructConstraintPdfs(){
   //constraints.add(*(auxilliaryConstraintsPDF));
   //constraints.add(*(DiracDeltaPDF));
   constraintsPDF = new RooProdPdf("constraintsPDF", "constraintsPDF", constraints);
-}
-void HiggsMassConstraint::constructCompoundPdf(){
-  //RooArgList pdfList(*simpleBWPDF, *constraintsPDF);
-  RooArgList pdfList(*spinPDF, *constraintsPDF);
-  PDF = new RooProdPdf("HiggsMassConstraint_PDF", "HiggsMassConstraint_PDF", pdfList);
-
-  RooArgList fastpdfList;
-  fastpdfList.add(*constraintsPDF);
-  //fastpdfList.add(*slicePDF);
-  for (unsigned int ipdf=0; ipdf<splineFactories.size(); ipdf++){
-    if (string(splineFactories.at(ipdf)->getPDF()->GetName()).find("mH125")!=string::npos) fastpdfList.add(*(splineFactories.at(ipdf)->getPDF()));
-  }
 #if hmc_debug==1
-  slicePDF->Print("v");
-
   RooArgSet* pdfPars;
   TIterator* parIter;
   RooAbsArg* thePar;
-  cout << "HiggsMassConstraint::constructCompoundPdf: slicePDF parameters:" << endl;
-  pdfPars = slicePDF->getParameters((RooArgSet*)0, true);
-  parIter = pdfPars->createIterator();
-  while ((thePar = (RooAbsArg*)parIter->Next())) cout << thePar->GetName() << endl;
-  cout << endl;
-  delete parIter;
-  delete pdfPars;
-
-  cout << "HiggsMassConstraint::constructCompoundPdf: slicePDF observables:" << endl;
-  pdfPars = slicePDF->getObservables((RooArgSet*)0, true);
-  parIter = pdfPars->createIterator();
-  while ((thePar = (RooAbsArg*)parIter->Next())) cout << thePar->GetName() << endl;
-  cout << endl;
-  delete parIter;
-  delete pdfPars;
-
-  cout << "HiggsMassConstraint::constructCompoundPdf: slicePDF dependents:" << endl;
-  pdfPars = slicePDF->getDependents((RooArgSet*)0);
-  parIter = pdfPars->createIterator();
-  while ((thePar = (RooAbsArg*)parIter->Next())) cout << thePar->GetName() << endl;
-  cout << endl;
-  delete parIter;
-  delete pdfPars;
 
   constraintsPDF->Print("v");
-  cout << "HiggsMassConstraint::constructCompoundPdf: constraintsPDF parameters:" << endl;
+  cout << "HiggsMassConstraint::constructConstraintPdfs: constraintsPDF parameters:" << endl;
   pdfPars = constraintsPDF->getParameters((RooArgSet*)0, true);
   parIter = pdfPars->createIterator();
   while ((thePar = (RooAbsArg*)parIter->Next())) cout << thePar->GetName() << endl;
@@ -479,7 +429,7 @@ void HiggsMassConstraint::constructCompoundPdf(){
   delete parIter;
   delete pdfPars;
 
-  cout << "HiggsMassConstraint::constructCompoundPdf: constraintsPDF observables:" << endl;
+  cout << "HiggsMassConstraint::constructConstraintPdfs: constraintsPDF observables:" << endl;
   pdfPars = constraintsPDF->getObservables((RooArgSet*)0, true);
   parIter = pdfPars->createIterator();
   while ((thePar = (RooAbsArg*)parIter->Next())) cout << thePar->GetName() << endl;
@@ -487,18 +437,102 @@ void HiggsMassConstraint::constructCompoundPdf(){
   delete parIter;
   delete pdfPars;
 
-  cout << "HiggsMassConstraint::constructCompoundPdf: constraintsPDF dependents:" << endl;
+  cout << "HiggsMassConstraint::constructConstraintPdfs: constraintsPDF dependents:" << endl;
   pdfPars = constraintsPDF->getDependents((RooArgSet*)0);
   parIter = pdfPars->createIterator();
   while ((thePar = (RooAbsArg*)parIter->Next())) cout << thePar->GetName() << endl;
   cout << endl;
   delete parIter;
   delete pdfPars;
-
 #endif
-  //for (unsigned int ip=0; ip<simpleBWPDF.size(); ip++) fastpdfList.add(*(simpleBWPDF.at(ip)));
-  //fastpdfList.add(*bwProdPDF);
-  fastPDF = new RooProdPdf("HiggsMassConstraint_FastPDF", "HiggsMassConstraint_FastPDF", fastpdfList);
+}
+void HiggsMassConstraint::constructCompoundPdf(){
+  RooArgList pdfList(*spinPDF, *constraintsPDF);
+  PDF = new RooProdPdf("HiggsMassConstraint_PDF", "HiggsMassConstraint_PDF", pdfList);
+
+#if hmc_debug==1
+  RooArgSet* pdfPars;
+  TIterator* parIter;
+  RooAbsArg* thePar;
+
+  PDF->Print("v");
+  cout << "HiggsMassConstraint::constructCompoundPdf: PDF parameters:" << endl;
+  pdfPars = PDF->getParameters((RooArgSet*)0, true);
+  parIter = pdfPars->createIterator();
+  while ((thePar = (RooAbsArg*)parIter->Next())) cout << thePar->GetName() << endl;
+  cout << endl;
+  delete parIter;
+  delete pdfPars;
+
+  cout << "HiggsMassConstraint::constructCompoundPdf: PDF observables:" << endl;
+  pdfPars = PDF->getObservables((RooArgSet*)0, true);
+  parIter = pdfPars->createIterator();
+  while ((thePar = (RooAbsArg*)parIter->Next())) cout << thePar->GetName() << endl;
+  cout << endl;
+  delete parIter;
+  delete pdfPars;
+
+  cout << "HiggsMassConstraint::constructCompoundPdf: PDF dependents:" << endl;
+  pdfPars = PDF->getDependents((RooArgSet*)0);
+  parIter = pdfPars->createIterator();
+  while ((thePar = (RooAbsArg*)parIter->Next())) cout << thePar->GetName() << endl;
+  cout << endl;
+  delete parIter;
+  delete pdfPars;
+#endif
+}
+void HiggsMassConstraint::constructCompoundFastPdf(){
+  vector<Double_t> fcnList;
+  for (unsigned int ip=0; ip<splineCoord[1].size(); ip++){
+    mManip[0]->setVal(splineCoord[1].at(ip));
+    Double_t fcn = spline2DFactory->getPDF()->getVal();
+#if hmc_debug==1
+    cout << "spline1DPDF(m1=" << mManip[0]->getVal() << ") = " << fcn << endl;
+#endif
+    fcnList.push_back(fcn);
+  }
+  spline1DFactory->setPoints(splineCoord[1], fcnList);
+  RooNCSplinePdf_1D_fast* splinePDF = (RooNCSplinePdf_1D_fast*)spline1DFactory->getPDF();
+  if (splinePDF!=0){
+    RooArgList fastpdfList;
+    fastpdfList.add(*splinePDF);
+    fastpdfList.add(*constraintsPDF);
+    fastPDF = new RooProdPdf("HiggsMassConstraint_FastPDF", "HiggsMassConstraint_FastPDF", fastpdfList);
+  }
+  else{
+    cerr << "HiggsMassConstraint::constructCompoundFastPdf: ERROR: 1D spline could not be constructed. Aborting..." << endl;
+    assert(0);
+  }
+#if hmc_debug==1
+  RooArgSet* pdfPars;
+  TIterator* parIter;
+  RooAbsArg* thePar;
+
+  fastPDF->Print("v");
+  cout << "HiggsMassConstraint::constructCompoundFastPdf: fastPDF parameters:" << endl;
+  pdfPars = fastPDF->getParameters((RooArgSet*)0, true);
+  parIter = pdfPars->createIterator();
+  while ((thePar = (RooAbsArg*)parIter->Next())) cout << thePar->GetName() << endl;
+  cout << endl;
+  delete parIter;
+  delete pdfPars;
+
+  cout << "HiggsMassConstraint::constructCompoundFastPdf: fastPDF observables:" << endl;
+  pdfPars = fastPDF->getObservables((RooArgSet*)0, true);
+  parIter = pdfPars->createIterator();
+  while ((thePar = (RooAbsArg*)parIter->Next())) cout << thePar->GetName() << endl;
+  cout << endl;
+  delete parIter;
+  delete pdfPars;
+
+  cout << "HiggsMassConstraint::constructCompoundFastPdf: fastPDF dependents:" << endl;
+  pdfPars = fastPDF->getDependents((RooArgSet*)0);
+  parIter = pdfPars->createIterator();
+  while ((thePar = (RooAbsArg*)parIter->Next())) cout << thePar->GetName() << endl;
+  cout << endl;
+  delete parIter;
+  delete pdfPars;
+#endif
 }
 
 void HiggsMassConstraint::destroyVariables(){
@@ -560,6 +594,8 @@ void HiggsMassConstraint::destroyVariables(){
     }
   }
 
+  for (unsigned int iv=0; iv<3; iv++) deletePtr(mManip[iv]);
+
   deletePtr(m1highcut);
   deletePtr(m2highcut);
   deletePtr(m1lowcut);
@@ -570,11 +606,7 @@ void HiggsMassConstraint::destroyVariables(){
   deletePtr(varOne);
   deletePtr(varZero);
 }
-void HiggsMassConstraint::destroySplinePDFs(){
-  deletePtr(slicePDFFactory);
-  for (unsigned int it=0; it<splineFactories.size(); it++) delete splineFactories.at(it);
-  splineFactories.clear();
-}
+void HiggsMassConstraint::destroySplinePDF(){ deletePtr(spline1DFactory); deletePtr(spline2DFactory); }
 void HiggsMassConstraint::destroyPdfFactory(){
   // Delete the bwProdPDF and simpleBWPDF first since the measurables and parameters come from the pdfFactory
   for (unsigned int ip=0; ip<simpleBWPDF.size(); ip++) deletePtr(simpleBWPDF.at(ip));
@@ -596,10 +628,8 @@ void HiggsMassConstraint::destroyConstraintPdfs(){
     }
   }
 }
-void HiggsMassConstraint::destroyCompoundPdf(){
-  deletePtr(fastPDF);
-  deletePtr(PDF);
-}
+void HiggsMassConstraint::destroyCompoundPdf(){ deletePtr(PDF); }
+void HiggsMassConstraint::destroyCompoundFastPdf(){ deletePtr(fastPDF); }
 
 void HiggsMassConstraint::setFastPDF(bool useFastPDF_){ useFastPDF = useFastPDF_; }
 void HiggsMassConstraint::setPtEtaCuts(
@@ -1079,7 +1109,7 @@ void HiggsMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, 
         }
 
         // Get fermion covariance matrices in terms of pT, lambda and phi
-        Double_t coefMat_ferm[9] = { 0 };
+        Double_t coefMat_ferm[9] ={ 0 };
         sortGetCovarianceMatrix(coefMat_ferm, fermion);
 #if hmc_debug==1
         cout << "HiggsMassConstraint::addDaughters: Daughter " << iZ << " / " << iferm << " input covariance matrix:" << endl;
@@ -1090,26 +1120,32 @@ void HiggsMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, 
           if (coefMat_ferm[3*0+0]==0. && coefMat_ferm[3*0+1]==0. && coefMat_ferm[3*0+2]==0.) pT_ferm[iZ][iferm]->setConstant(true);
           if (coefMat_ferm[3*1+1]==0. && coefMat_ferm[3*1+1]==0. && coefMat_ferm[3*1+2]==0.) lambda_ferm[iZ][iferm]->setConstant(true);
           if (coefMat_ferm[3*2+2]==0. && coefMat_ferm[3*1+2]==0. && coefMat_ferm[3*2+2]==0.) phi_ferm[iZ][iferm]->setConstant(true);
-          if (!pT_ferm[iZ][iferm]->isConstant()) pT_ferm[iZ][iferm]->setRange(max(pT_ferm[iZ][iferm]->getMin(), pT_ferm[iZ][iferm]->getVal()-5.*sqrt(coefMat_ferm[3*0+0])), min(pT_ferm[iZ][iferm]->getMax(), pT_ferm[iZ][iferm]->getVal()+5.*sqrt(coefMat_ferm[3*0+0])));
-          if (!lambda_ferm[iZ][iferm]->isConstant()) lambda_ferm[iZ][iferm]->setRange(max(lambda_ferm[iZ][iferm]->getMin(), lambda_ferm[iZ][iferm]->getVal()-5.*sqrt(coefMat_ferm[3*1+1])), min(lambda_ferm[iZ][iferm]->getMax(), lambda_ferm[iZ][iferm]->getVal()+5.*sqrt(coefMat_ferm[3*1+1])));
-          if (!phi_ferm[iZ][iferm]->isConstant()) phi_ferm[iZ][iferm]->setRange(max(phi_ferm[iZ][iferm]->getMin(), phi_ferm[iZ][iferm]->getVal()-5.*sqrt(coefMat_ferm[3*2+2])), min(phi_ferm[iZ][iferm]->getMax(), phi_ferm[iZ][iferm]->getVal()+5.*sqrt(coefMat_ferm[3*2+2])));
+          if (!pT_ferm[iZ][iferm]->isConstant()){
+            pT_ferm[iZ][iferm]->setRange(
+              max(pT_ferm[iZ][iferm]->getMin(), pT_ferm[iZ][iferm]->getVal()-5.*sqrt(coefMat_ferm[3*0+0])),
+              min(pT_ferm[iZ][iferm]->getMax(), pT_ferm[iZ][iferm]->getVal()+5.*sqrt(coefMat_ferm[3*0+0]))
+              );
+            pTobs_ferm[iZ][iferm]->setRange(pT_ferm[iZ][iferm]->getMin(), pT_ferm[iZ][iferm]->getMax());
+          }
+          if (!lambda_ferm[iZ][iferm]->isConstant()){
+            lambda_ferm[iZ][iferm]->setRange(
+              max(lambda_ferm[iZ][iferm]->getMin(), lambda_ferm[iZ][iferm]->getVal()-5.*sqrt(coefMat_ferm[3*1+1])),
+              min(lambda_ferm[iZ][iferm]->getMax(), lambda_ferm[iZ][iferm]->getVal()+5.*sqrt(coefMat_ferm[3*1+1]))
+              );
+            lambdaobs_ferm[iZ][iferm]->setRange(lambda_ferm[iZ][iferm]->getMin(), lambda_ferm[iZ][iferm]->getMax());
+          }
+          if (!phi_ferm[iZ][iferm]->isConstant()){
+            phi_ferm[iZ][iferm]->setRange(
+              max(phi_ferm[iZ][iferm]->getMin(), phi_ferm[iZ][iferm]->getVal()-5.*sqrt(coefMat_ferm[3*2+2])),
+              min(phi_ferm[iZ][iferm]->getMax(), phi_ferm[iZ][iferm]->getVal()+5.*sqrt(coefMat_ferm[3*2+2]))
+              );
+            phiobs_ferm[iZ][iferm]->setRange(phi_ferm[iZ][iferm]->getMin(), phi_ferm[iZ][iferm]->getMax());
+          }
 
           strategicInvertCovarianceMatrix(useFullCov, fitpT, fitlambda, fitphi, coefMat_ferm);
-
-          // Fix the gaussian pdf variables as necessary
-          Int_t gaussianCode=1;
-          if (pT_ferm[iZ][iferm]->isConstant()) gaussianCode *= RooGaussianMomConstraint::prime_var1;
-          if (lambda_ferm[iZ][iferm]->isConstant()) gaussianCode *= RooGaussianMomConstraint::prime_var2;
-          if (phi_ferm[iZ][iferm]->isConstant()) gaussianCode *= RooGaussianMomConstraint::prime_var3;
-#ifndef gauscheck
-          if (gausConstraintsPDF[iZ][iferm][0]!=0) gausConstraintsPDF[iZ][iferm][0]->fixVariable(gaussianCode);
-#endif
         }
         else{
           for (int ix=0; ix<3; ix++){ for (int iy=0; iy<3; iy++) coefMat_ferm[3*ix+iy]=0; }
-#ifndef gauscheck
-          if (gausConstraintsPDF[iZ][iferm][0]!=0) gausConstraintsPDF[iZ][iferm][0]->fixVariable(RooGaussianMomConstraint::prime_var1*RooGaussianMomConstraint::prime_var2*RooGaussianMomConstraint::prime_var3);
-#endif
         }
         setInverseCovarianceMatrix(iZ, iferm, 0, coefMat_ferm);
 
@@ -1163,26 +1199,32 @@ void HiggsMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, 
             if (coefMat_fsr[3*0+0]==0. && coefMat_fsr[3*0+1]==0. && coefMat_fsr[3*0+2]==0.) pT_fsr[iZ][iferm]->setConstant(true);
             if (coefMat_fsr[3*1+1]==0. && coefMat_fsr[3*1+1]==0. && coefMat_fsr[3*1+2]==0.) lambda_fsr[iZ][iferm]->setConstant(true);
             if (coefMat_fsr[3*2+2]==0. && coefMat_fsr[3*1+2]==0. && coefMat_fsr[3*2+2]==0.) phi_fsr[iZ][iferm]->setConstant(true);
-            if (!pT_fsr[iZ][iferm]->isConstant()) pT_fsr[iZ][iferm]->setRange(max(pT_fsr[iZ][iferm]->getMin(), pT_fsr[iZ][iferm]->getVal()-5.*sqrt(coefMat_fsr[3*0+0])), max(pT_fsr[iZ][iferm]->getMax(), pT_fsr[iZ][iferm]->getVal()+5.*sqrt(coefMat_fsr[3*0+0])));
-            if (!lambda_fsr[iZ][iferm]->isConstant()) lambda_fsr[iZ][iferm]->setRange(max(lambda_fsr[iZ][iferm]->getMin(), lambda_fsr[iZ][iferm]->getVal()-5.*sqrt(coefMat_fsr[3*1+1])), max(lambda_fsr[iZ][iferm]->getMax(), lambda_fsr[iZ][iferm]->getVal()+5.*sqrt(coefMat_fsr[3*1+1])));
-            if (!phi_fsr[iZ][iferm]->isConstant()) phi_fsr[iZ][iferm]->setRange(max(phi_fsr[iZ][iferm]->getMin(), phi_fsr[iZ][iferm]->getVal()-5.*sqrt(coefMat_fsr[3*2+2])), max(phi_fsr[iZ][iferm]->getMax(), phi_fsr[iZ][iferm]->getVal()+5.*sqrt(coefMat_fsr[3*2+2])));
+            if (!pT_fsr[iZ][iferm]->isConstant()){
+              pT_fsr[iZ][iferm]->setRange(
+                max(pT_fsr[iZ][iferm]->getMin(), pT_fsr[iZ][iferm]->getVal()-5.*sqrt(coefMat_fsr[3*0+0])),
+                min(pT_fsr[iZ][iferm]->getMax(), pT_fsr[iZ][iferm]->getVal()+5.*sqrt(coefMat_fsr[3*0+0]))
+                );
+              pTobs_fsr[iZ][iferm]->setRange(pT_fsr[iZ][iferm]->getMin(), pT_fsr[iZ][iferm]->getMax());
+            }
+            if (!lambda_fsr[iZ][iferm]->isConstant()){
+              lambda_fsr[iZ][iferm]->setRange(
+                max(lambda_fsr[iZ][iferm]->getMin(), lambda_fsr[iZ][iferm]->getVal()-5.*sqrt(coefMat_fsr[3*1+1])),
+                min(lambda_fsr[iZ][iferm]->getMax(), lambda_fsr[iZ][iferm]->getVal()+5.*sqrt(coefMat_fsr[3*1+1]))
+                );
+              lambdaobs_fsr[iZ][iferm]->setRange(lambda_fsr[iZ][iferm]->getMin(), lambda_fsr[iZ][iferm]->getMax());
+            }
+            if (!phi_fsr[iZ][iferm]->isConstant()){
+              phi_fsr[iZ][iferm]->setRange(
+                max(phi_fsr[iZ][iferm]->getMin(), phi_fsr[iZ][iferm]->getVal()-5.*sqrt(coefMat_fsr[3*2+2])),
+                min(phi_fsr[iZ][iferm]->getMax(), phi_fsr[iZ][iferm]->getVal()+5.*sqrt(coefMat_fsr[3*2+2]))
+                );
+              phiobs_fsr[iZ][iferm]->setRange(phi_fsr[iZ][iferm]->getMin(), phi_fsr[iZ][iferm]->getMax());
+            }
 
             strategicInvertCovarianceMatrix(useFullCov, fitpT, fitlambda, fitphi, coefMat_fsr);
-
-            // Fix the gaussian pdf variables as necessary
-            Int_t gaussianCode=1;
-            if (pT_fsr[iZ][iferm]->isConstant()) gaussianCode *= RooGaussianMomConstraint::prime_var1;
-            if (lambda_fsr[iZ][iferm]->isConstant()) gaussianCode *= RooGaussianMomConstraint::prime_var2;
-            if (phi_fsr[iZ][iferm]->isConstant()) gaussianCode *= RooGaussianMomConstraint::prime_var3;
-#ifndef gauscheck
-            if (gausConstraintsPDF[iZ][iferm][1]!=0) gausConstraintsPDF[iZ][iferm][1]->fixVariable(gaussianCode);
-#endif
           }
           else{
             for (int ix=0; ix<3; ix++){ for (int iy=0; iy<3; iy++) coefMat_fsr[3*ix+iy]=0; }
-#ifndef gauscheck
-            if (gausConstraintsPDF[iZ][iferm][1]!=0) gausConstraintsPDF[iZ][iferm][1]->fixVariable(RooGaussianMomConstraint::prime_var1*RooGaussianMomConstraint::prime_var2*RooGaussianMomConstraint::prime_var3);
-#endif
           }
           setInverseCovarianceMatrix(iZ, iferm, 1, coefMat_fsr);
         }
@@ -1201,10 +1243,6 @@ void HiggsMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, 
           pT_fsr[iZ][iferm]->setConstant(false); pT_fsr[iZ][iferm]->setRange(0., sqrts); pT_fsr[iZ][iferm]->setVal(0.); pT_fsr[iZ][iferm]->setRange(0., 0.); pT_fsr[iZ][iferm]->setConstant(true);
           lambda_fsr[iZ][iferm]->setConstant(false); lambda_fsr[iZ][iferm]->setRange(-piovertwo_val, piovertwo_val); lambda_fsr[iZ][iferm]->setVal(0.); lambda_fsr[iZ][iferm]->setRange(0., 0.); lambda_fsr[iZ][iferm]->setConstant(true);
           phi_fsr[iZ][iferm]->setConstant(false); phi_fsr[iZ][iferm]->setRange(-pi_val, pi_val); phi_fsr[iZ][iferm]->setVal(0.); phi_fsr[iZ][iferm]->setRange(0., 0.); phi_fsr[iZ][iferm]->setConstant(true);
-
-#ifndef gauscheck
-          if (gausConstraintsPDF[iZ][iferm][1]!=0) gausConstraintsPDF[iZ][iferm][1]->fixVariable(RooGaussianMomConstraint::prime_var1*RooGaussianMomConstraint::prime_var2*RooGaussianMomConstraint::prime_var3);
-#endif
 
           setInverseCovarianceMatrix(iZ, iferm, 1, coefMat_fsr);
         }
@@ -1252,10 +1290,6 @@ void HiggsMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, 
       pT_fsr[iZ][iferm]->setConstant(false); pT_fsr[iZ][iferm]->setRange(0., sqrts); pT_fsr[iZ][iferm]->setVal(0.); pT_fsr[iZ][iferm]->setRange(0., 0.); pT_fsr[iZ][iferm]->setConstant(true);
       lambda_fsr[iZ][iferm]->setConstant(false); lambda_fsr[iZ][iferm]->setRange(-piovertwo_val, piovertwo_val); lambda_fsr[iZ][iferm]->setVal(0.); lambda_fsr[iZ][iferm]->setRange(0., 0.); lambda_fsr[iZ][iferm]->setConstant(true);
       phi_fsr[iZ][iferm]->setConstant(false); phi_fsr[iZ][iferm]->setRange(-pi_val, pi_val); phi_fsr[iZ][iferm]->setVal(0.); phi_fsr[iZ][iferm]->setRange(0., 0.); phi_fsr[iZ][iferm]->setConstant(true);
-
-#ifndef gauscheck
-      for (int ifsr=0; ifsr<2; ifsr++){ if (gausConstraintsPDF[iZ][iferm][ifsr]!=0) gausConstraintsPDF[iZ][iferm][ifsr]->fixVariable(RooGaussianMomConstraint::prime_var1*RooGaussianMomConstraint::prime_var2*RooGaussianMomConstraint::prime_var3); }
-#endif
 
       Double_t coefMat_ferm[9] ={ 0 };
       Double_t coefMat_fsr[9] ={ 0 };
@@ -1312,6 +1346,11 @@ void HiggsMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, 
 
   cout << "===============================" << endl;
 #endif
+
+  // Set spline variable at the very end
+  mManip[2]->setConstant(false);
+  for (unsigned int iv=0; iv<3; iv++) mManip[iv]->setVal(m[iv]->getVal());
+  mManip[2]->setConstant(true);
 }
 
 void HiggsMassConstraint::fitTo(std::vector<pair<const reco::Candidate*, const pat::PFParticle*>>& FermionWithFSR){
@@ -1432,12 +1471,14 @@ void HiggsMassConstraint::fit(){
 #endif
 
   // Get the data to fit
-  RooArgSet fitVars;
-  RooDataSet* data = getDataset(&fitVars, 0);
-
+  RooArgSet fitVars, conditionals;
+  RooDataSet* data = getDataset(&fitVars, &conditionals);
+  conditionals.add(*(mManip[2]));
   // Get the PDF to use
   RooAbsPdf* activePDF;
   if (useFastPDF){
+    destroyCompoundFastPdf();
+    constructCompoundFastPdf();
     activePDF = fastPDF;
 #if hmc_debug==1
     cout << "HiggsMassConstraint::fit: FastPDF option is active. The PDF being used is " << activePDF->GetName() << "." << endl;
@@ -1446,7 +1487,7 @@ void HiggsMassConstraint::fit(){
   else{
     activePDF = PDF;
 #if hmc_debug==1
-    cout << "HiggsMassConstraint::fit: FastPDF option is not active. The PDF being used is " << activePDF->GetName() << "." << endl;
+    cout << "HiggsMassConstraint::fit: FastPDF option is inactive. The PDF being used is " << activePDF->GetName() << "." << endl;
 #endif
   }
 #if hmc_debug==1
@@ -1487,7 +1528,7 @@ void HiggsMassConstraint::fit(){
   // Delete the fitResult in case it exists, just to avoid unwanted memory leaks.
   deletePtr(fitResult);
 
-  // Hold the factory parameters tight!
+  // Fix the factory parameters
   if (hvvFactory!=0){ hvvFactory->makeParamsConst(true); hvvFactory->makeCouplingsConst(true); }
   if (hvvFastFactory!=0){ hvvFastFactory->makeParamsConst(true); hvvFastFactory->makeCouplingsConst(true); }
   if (xvvFactory!=0){ xvvFactory->makeParamsConst(true); xvvFactory->makeCouplingsConst(true); }
@@ -1500,7 +1541,7 @@ void HiggsMassConstraint::fit(){
   cout << "HiggsMassConstraint::fit: Attempting first fit." << endl;
 #endif
   RooLinkedList cmdList;
-  //RooCmdArg condObsArg = RooFit::ConditionalObservables(conditionals); cmdList.Add((TObject*)&condObsArg);
+  RooCmdArg condObsArg = RooFit::ConditionalObservables(conditionals); cmdList.Add((TObject*)&condObsArg);
   RooCmdArg constrArg = RooFit::Constrain(fitVars); cmdList.Add((TObject*)&constrArg); // All fit variables should be constrained!
   RooCmdArg saveArg = RooFit::Save(true); cmdList.Add((TObject*)&saveArg);
   RooCmdArg hesseArg = RooFit::Hesse(true); cmdList.Add((TObject*)&hesseArg);
@@ -2072,14 +2113,15 @@ void HiggsMassConstraint::setInverseCovarianceMatrix(Int_t iZ, Int_t iferm, Int_
   if (fsrindex==0){ for (int i=0; i<9; i++){ invcov_ferm[iZ][iferm][i]->setConstant(false); invcov_ferm[iZ][iferm][i]->setVal(momCov[i]); invcov_ferm[iZ][iferm][i]->setConstant(true); } }
   else{ for (int i=0; i<9; i++){ invcov_fsr[iZ][iferm][i]->setConstant(false); invcov_fsr[iZ][iferm][i]->setVal(momCov[i]); invcov_fsr[iZ][iferm][i]->setConstant(true); } }
 #if hmc_debug==1
-  cout << "Inverse of the covariance matrix for Z" << iZ+1 << " daughter " << iferm+1 << " is:" << endl;
   if (fsrindex==0){
+    cout << "Inverse of the covariance matrix for Z" << iZ+1 << " daughter " << iferm+1 << " is:" << endl;
     for (int i=0; i<3; i++){
       for (int j=0; j<3; j++) cout <<  invcov_ferm[iZ][iferm][3*i+j]->getVal() << '\t';
       cout << endl;
     }
   }
   else{
+    cout << "Inverse of the covariance matrix for Z" << iZ+1 << " daughter " << iferm+1 << " FSR is:" << endl;
     for (int i=0; i<3; i++){
       for (int j=0; j<3; j++) cout <<  invcov_fsr[iZ][iferm][3*i+j]->getVal() << '\t';
       cout << endl;
