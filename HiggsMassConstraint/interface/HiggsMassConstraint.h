@@ -200,14 +200,21 @@ public:
 
   // Do the fit for the fermion-FSR pairs, FSR-being per-fermion.
   void fitTo(std::vector<pair<const reco::Candidate*, const pat::PFParticle*>>& FermionWithFSR);
-  void summarizeDaughters()const;
+  void summarizeDaughters() const;
 
   RooAbsPdf* getPDF();
   SpinPdfFactory* getPDFFactory();
 
   Double_t getRefittedMassError(Int_t imass) const; // imass==0 is m1, imass==1 is m2, imass==2 is m12.
   Double_t getRefittedMass(Int_t imass) const;
+  Double_t getRefittedPtError(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
+  Double_t getRefittedLambdaError(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
+  Double_t getRefittedPhiError(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
   TLorentzVector getRefittedMomentum(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
+  Double_t getObsPtError(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
+  Double_t getObsLambdaError(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
+  Double_t getObsPhiError(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
+
 
   // Get the integration graph
   void setFastIntegrationGraph(TString strfname, TString strtgname);
@@ -368,6 +375,7 @@ protected:
 
   // Add the fermion-FSR pairs, FSR-being per-fermion. fitRetry=true prevents clearing of the protected objects container and allows another fit through different strategies in case the initial fit fails.
   void addDaughters(std::vector<pair<const reco::Candidate*, const pat::PFParticle*>>& FermionWithFSR, bool fitRetry=false); // To set the Lepton and photon arrays in a pair form. Pass null-pointer if the photon does not exist.
+  void sortDaughters(const std::vector<pair<const reco::Candidate*, const pat::PFParticle*>>& FermionWithFSR, std::vector<int>& order) const;
   // Do the fit, retry if unsuccessful.
   void getDataVariables(RooArgSet* fitVars, RooArgSet* intVars, RooArgSet* condVars) const;
   RooDataSet* getDataset(RooArgSet* fitVars=0, RooArgSet* condVars=0) const;
