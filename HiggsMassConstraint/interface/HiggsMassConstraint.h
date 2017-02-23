@@ -108,23 +108,14 @@ public:
     FullCov_All_pTLambda,
     FullCov_All_pTPhi,
     FullCov_All_LambdaPhi,
-    FullCov_All_pT,
-    FullCov_All_Lambda,
-    FullCov_All_Phi,
     FullCov_NoFSR_pTLambdaPhi,
     FullCov_NoFSR_pTLambda,
     FullCov_NoFSR_pTPhi,
     FullCov_NoFSR_LambdaPhi,
-    FullCov_NoFSR_pT,
-    FullCov_NoFSR_Lambda,
-    FullCov_NoFSR_Phi,
     FullCov_OnlyFSR_pTLambdaPhi,
     FullCov_OnlyFSR_pTLambda,
     FullCov_OnlyFSR_pTPhi,
     FullCov_OnlyFSR_LambdaPhi,
-    FullCov_OnlyFSR_pT,
-    FullCov_OnlyFSRR_Lambda,
-    FullCov_OnlyFSR_Phi,
     CovDiagonals_All_pTLambdaPhi,
     CovDiagonals_All_pTLambda,
     CovDiagonals_All_pTPhi,
@@ -194,20 +185,28 @@ public:
   void setFastPDF(bool useFastPDF_=true);
 
   // Make sure each strategy is implemented correctly. Affects the behavior of covariance matrix extractions in addDaughters.
-  void setFitMomentumStrategy(HiggsMassConstraint::FitMomentumStrategy fitMomStrategy_=HiggsMassConstraint::/*FullCov_All_pTLambdaPhi*/FullCov_NoFSR_pT);
+  void setFitMomentumStrategy(HiggsMassConstraint::FitMomentumStrategy fitMomStrategy_=HiggsMassConstraint::/*FullCov_All_pTLambdaPhi*/CovDiagonals_NoFSR_pT);
   void setFitVVStrategy(HiggsMassConstraint::FitVVStrategy fitVVStrategy_=HiggsMassConstraint::Fit_All_V1);
   HiggsMassConstraint::FitMomentumStrategy getFitMomentumStrategy();
 
   // Do the fit for the fermion-FSR pairs, FSR-being per-fermion.
   void fitTo(std::vector<pair<const reco::Candidate*, const pat::PFParticle*>>& FermionWithFSR);
-  void summarizeDaughters()const;
+  void summarizeDaughters() const;
 
   RooAbsPdf* getPDF();
   SpinPdfFactory* getPDFFactory();
 
   Double_t getRefittedMassError(Int_t imass) const; // imass==0 is m1, imass==1 is m2, imass==2 is m12.
   Double_t getRefittedMass(Int_t imass) const;
+  Double_t getRefittedPtError(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
+  Double_t getRefittedLambdaError(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
+  Double_t getRefittedPhiError(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
   TLorentzVector getRefittedMomentum(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
+  Double_t getObsMassError(Int_t imass) const;
+  Double_t getObsPtError(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
+  Double_t getObsLambdaError(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
+  Double_t getObsPhiError(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
+
 
   // Get the integration graph
   void setFastIntegrationGraph(TString strfname, TString strtgname);
@@ -249,6 +248,7 @@ protected:
   Double_t lambdacut_jet;
   Double_t pTcut_fsr;
   Double_t lambdacut_fsr;
+  Double_t initMassError[3];
   RooRealVar* m1lowcut;
   RooRealVar* m2lowcut;
   RooRealVar* m1highcut;
@@ -368,6 +368,7 @@ protected:
 
   // Add the fermion-FSR pairs, FSR-being per-fermion. fitRetry=true prevents clearing of the protected objects container and allows another fit through different strategies in case the initial fit fails.
   void addDaughters(std::vector<pair<const reco::Candidate*, const pat::PFParticle*>>& FermionWithFSR, bool fitRetry=false); // To set the Lepton and photon arrays in a pair form. Pass null-pointer if the photon does not exist.
+  void sortDaughters(const std::vector<pair<const reco::Candidate*, const pat::PFParticle*>>& FermionWithFSR, std::vector<int>& order) const;
   // Do the fit, retry if unsuccessful.
   void getDataVariables(RooArgSet* fitVars, RooArgSet* intVars, RooArgSet* condVars) const;
   RooDataSet* getDataset(RooArgSet* fitVars=0, RooArgSet* condVars=0) const;
@@ -397,6 +398,9 @@ protected:
   
   void setInitialCovarianceMatrix(Int_t iZ, Int_t iferm, Int_t fsrindex, Double_t momCov[9]);
   void resetInitialCovarianceMatrix();
+
+  void setInitialMassErrors();
+  void resetInitialMassErrors();
 
   bool standardOrderedFinalCovarianceMatrix(const RooArgList& pars); // Re-order the covariance matrix from the fit, expand as necessary
   Int_t fitParameterCorrespondance(RooRealVar* par);
