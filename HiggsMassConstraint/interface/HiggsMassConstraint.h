@@ -48,7 +48,7 @@
 
 
 #ifndef hmc_debug
-#define hmc_debug 1
+#define hmc_debug 0
 #endif
 #ifndef gauscheck
 #define gauscheck
@@ -200,6 +200,7 @@ public:
 
   // Do the fit for the fermion-FSR pairs, FSR-being per-fermion.
   void fitTo(std::vector<pair<const reco::Candidate*, const pat::PFParticle*>>& FermionWithFSR);
+  void summarizeDaughters()const;
 
   RooAbsPdf* getPDF();
   SpinPdfFactory* getPDFFactory();

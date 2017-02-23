@@ -353,7 +353,7 @@ void HiggsMassConstraint::constructSplinePDF(){
   // Construct 2D spline factory and its PDF
   spline2DFactory = new NCSplinePdfFactory_2D(mManip[2], mManip[0], "2D");
   spline2DFactory->setPoints(points);
-  ((RooNCSplinePdfCore*)spline2DFactory->getPDF())->setVerbosity(RooNCSplinePdfCore::kVerbose);
+  //((RooNCSplinePdfCore*)spline2DFactory->getPDF())->setVerbosity(RooNCSplinePdfCore::kVerbose);
   sqrts=min(massmax, sqrts);
   mManip[2]->setRange(massmin, sqrts);
   mManip[0]->setRange(splineCoord[1].at(0), splineCoord[1].at(splineCoord[1].size()-1));
@@ -380,7 +380,7 @@ void HiggsMassConstraint::constructConstraintPdfs(){
       for (int im=0; im<9; im++) me_ferm.add(*(invcov_ferm[iZ][iferm][im]));
       gausConstraintsPDF[iZ][iferm][0] = new RooGaussianMomConstraint(Form("gausConstraintsPDF_Z%iFermion%i", iZ+1, iferm+1), Form("gausConstraintsPDF_Z%iFermion%i", iZ+1, iferm+1), vars_ferm, means_ferm, me_ferm, RooGaussianMomConstraint::kRhoLambdaPhi);
       if (iZ==0) constraints.add(*(gausConstraintsPDF[iZ][iferm][0]));
-      gausConstraintsPDF[iZ][iferm][0]->setVerbosity(RooGaussianMomConstraint::kVerbose);
+      //gausConstraintsPDF[iZ][iferm][0]->setVerbosity(RooGaussianMomConstraint::kVerbose);
 
       RooArgList vars_fsr, means_fsr, me_fsr;
       vars_fsr.add(*(pT_fsr[iZ][iferm]));
@@ -392,7 +392,7 @@ void HiggsMassConstraint::constructConstraintPdfs(){
       for (int im=0; im<9; im++) me_fsr.add(*(invcov_fsr[iZ][iferm][im]));
       gausConstraintsPDF[iZ][iferm][1] = new RooGaussianMomConstraint(Form("gausConstraintsPDF_Z%iFermion%iFSR", iZ+1, iferm+1), Form("gausConstraintsPDF_Z%iFermion%iFSR", iZ+1, iferm+1), vars_fsr, means_fsr, me_fsr, RooGaussianMomConstraint::kRhoLambdaPhi);
       if (iZ==0) constraints.add(*(gausConstraintsPDF[iZ][iferm][1]));
-      gausConstraintsPDF[iZ][iferm][1]->setVerbosity(RooGaussianMomConstraint::kVerbose);
+      //gausConstraintsPDF[iZ][iferm][1]->setVerbosity(RooGaussianMomConstraint::kVerbose);
     }
   }
 
@@ -1112,7 +1112,7 @@ void HiggsMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, 
         Double_t coefMat_ferm[9] ={ 0 };
         sortGetCovarianceMatrix(coefMat_ferm, fermion);
 #if hmc_debug==1
-        cout << "HiggsMassConstraint::addDaughters: Daughter " << iZ << " / " << iferm << " input covariance matrix:" << endl;
+        cout << "HiggsMassConstraint::addDaughters: Daughter Z" << iZ << iferm << " input covariance matrix:" << endl;
         for (int ix=0; ix<3; ix++){ for (int iy=0; iy<3; iy++) cout << coefMat_ferm[3*ix+iy] << '\t'; cout << endl; }
 #endif
         setInitialCovarianceMatrix(iZ, iferm, 0, coefMat_ferm);
@@ -1191,7 +1191,7 @@ void HiggsMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, 
           // Get fsr covariance matrices in terms of pT, lambda and phi
           sortGetCovarianceMatrix(coefMat_fsr, fermion);
 #if hmc_debug==1
-          cout << "HiggsMassConstraint::addDaughters : Daughter " << iZ << " / " << iferm << " FSR input covariance matrix:" << endl;
+          cout << "HiggsMassConstraint::addDaughters : Daughter Z" << iZ << iferm << " FSR input covariance matrix:" << endl;
           for (int ix=0; ix<3; ix++){ for (int iy=0; iy<3; iy++) cout << coefMat_fsr[3*ix+iy] << '\t'; cout << endl; }
 #endif
           setInitialCovarianceMatrix(iZ, iferm, 1, coefMat_fsr);
@@ -1299,6 +1299,15 @@ void HiggsMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, 
   }
 
 #if hmc_debug==1
+  summarizeDaughters();
+#endif
+
+  // Set spline variable at the very end
+  mManip[2]->setConstant(false);
+  for (int iv=0; iv<3; iv++) mManip[iv]->setVal(m[iv]->getVal());
+  mManip[2]->setConstant(true);
+}
+void HiggsMassConstraint::summarizeDaughters()const{
   cout << "=== SUMMARY OF FINAL STATES ===" << endl;
 
   cout << "|| Fermions ||" << endl;
@@ -1345,12 +1354,6 @@ void HiggsMassConstraint::addDaughters(std::vector<pair<const reco::Candidate*, 
   cout << "m12 = " << m[2]->getVal() << endl;
 
   cout << "===============================" << endl;
-#endif
-
-  // Set spline variable at the very end
-  mManip[2]->setConstant(false);
-  for (unsigned int iv=0; iv<3; iv++) mManip[iv]->setVal(m[iv]->getVal());
-  mManip[2]->setConstant(true);
 }
 
 void HiggsMassConstraint::fitTo(std::vector<pair<const reco::Candidate*, const pat::PFParticle*>>& FermionWithFSR){
@@ -1577,7 +1580,7 @@ void HiggsMassConstraint::fit(){
     vector<pair<const reco::Candidate*, const pat::PFParticle*>> pseudoinput = inputRaw_Fermion_FSR;
     addDaughters(pseudoinput, true);
     data = getDataset(&fitVars, 0);
-    //condObsArg = RooFit::ConditionalObservables(conditionals); cmdList.Add((TObject*)&condObsArg);
+    condObsArg = RooFit::ConditionalObservables(conditionals); cmdList.Add((TObject*)&condObsArg);
     constrArg = RooFit::Constrain(fitVars); cmdList.Add((TObject*)&constrArg); // All fit variables should be constrained!
     cmdList.Add((TObject*)&saveArg);
     cmdList.Add((TObject*)&hesseArg);
@@ -1601,7 +1604,7 @@ void HiggsMassConstraint::fit(){
     vector<pair<const reco::Candidate*, const pat::PFParticle*>> pseudoinput = inputRaw_Fermion_FSR;
     addDaughters(pseudoinput, true);
     data = getDataset(&fitVars, 0);
-    //condObsArg = RooFit::ConditionalObservables(conditionals); cmdList.Add((TObject*)&condObsArg);
+    condObsArg = RooFit::ConditionalObservables(conditionals); cmdList.Add((TObject*)&condObsArg);
     constrArg = RooFit::Constrain(fitVars); cmdList.Add((TObject*)&constrArg); // All fit variables should be constrained!
     cmdList.Add((TObject*)&saveArg);
     cmdList.Add((TObject*)&hesseArg);
@@ -2172,6 +2175,10 @@ bool HiggsMassConstraint::standardOrderedFinalCovarianceMatrix(const RooArgList&
   fitCovMatrix.ResizeTo(nDims, nDims);
   fitCovMatrix=finalMatrix;
 
+  // Test the final fit strategy to decide which cov. mat. elements to drop
+  Int_t useFullCov, FermFSRType, fitpT, fitlambda, fitphi;
+  testFitMomentumStrategy(useFullCov, FermFSRType, fitpT, fitlambda, fitphi);
+
   // Add the unused initial cov. mat. to calculate the error correctly
   TMatrixDSym addMatrix(nDims);
   addMatrix = initCovMatrix;
@@ -2180,7 +2187,19 @@ bool HiggsMassConstraint::standardOrderedFinalCovarianceMatrix(const RooArgList&
     for (int iy=ix; iy<nDims; iy++){
       if (fitCovMatrix[ix][iy]!=0.){ doSkip=true; break; }
     }
-    if (doSkip){ for(int iy=ix; iy<nDims; iy++){ addMatrix[ix][iy]=0; addMatrix[iy][ix]=0; } }
+    if (doSkip){ for (int iy=ix; iy<nDims; iy++){ addMatrix[ix][iy]=0; addMatrix[iy][ix]=0; } }
+  }
+  for (int ix=0; ix<nDims; ix++){
+    for (int iy=ix; iy<nDims; iy++){
+      if (useFullCov==0){
+        if (ix!=iy){ addMatrix[ix][iy]=0; addMatrix[iy][ix]=0; }
+      }
+      else{
+        // Always include pT errors, decide to include lambda or phi correlations
+        if (fitlambda==0 && (ix%3==1 || iy%3==1) && ix!=iy){ addMatrix[ix][iy]=0; addMatrix[iy][ix]=0; }
+        if (fitphi==0 && (ix%3==2 || iy%3==2) && ix!=iy){ addMatrix[ix][iy]=0; addMatrix[iy][ix]=0; }
+      }
+    }
   }
   fitCovMatrix += addMatrix;
 
@@ -2214,24 +2233,19 @@ Int_t HiggsMassConstraint::fitParameterCorrespondance(RooRealVar* par){
 Double_t HiggsMassConstraint::d_Ek_d_pTk(Int_t kZ, Int_t kferm, Int_t fsrindex) const{
   Double_t pt_over_E=0;
   Double_t lambda=0;
-  Double_t mass=0;
   Double_t pT=0;
   Double_t E=0;
   if (fsrindex==0){
     E = E_ferm[kZ][kferm]->getVal();
     pT = pT_ferm[kZ][kferm]->getVal();
     lambda = lambda_ferm[kZ][kferm]->getVal();
-    mass = massbar_ferm[kZ][kferm]->getVal();
   }
   else{
     E = E_fsr[kZ][kferm]->getVal();
     pT = pT_fsr[kZ][kferm]->getVal();
     lambda = lambda_fsr[kZ][kferm]->getVal();
   }
-
-  if (E==0. && mass!=0.) pt_over_E=0;
-  else if (E==0. && mass==0.) pt_over_E = cos(lambda);
-  else pt_over_E = pT/E;
+  if (E>0.) pt_over_E = pT/E;
 
   return (pt_over_E/pow(cos(lambda), 2));
 }
@@ -2259,7 +2273,7 @@ Double_t HiggsMassConstraint::d_Ek_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrind
   return (pz*d_Ek_d_pTk(kZ, kferm, fsrindex));
 }
 Double_t HiggsMassConstraint::d_pjk_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const{
-  if (j!=2) return 0;
+  if (j!=2) return 0; // px and py do not depend on lambda
   Double_t pT=0;
   Double_t lambda=0;
   if (fsrindex==0){
@@ -2274,7 +2288,7 @@ Double_t HiggsMassConstraint::d_pjk_d_lambdak(Int_t kZ, Int_t kferm, Int_t fsrin
 }
 Double_t HiggsMassConstraint::d_Ek_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex) const{ return 0; }
 Double_t HiggsMassConstraint::d_pjk_d_phik(Int_t kZ, Int_t kferm, Int_t fsrindex, Int_t j) const{
-  if (j>=2) return 0.;
+  if (j>=2) return 0;
   Double_t pT=0;
   Double_t phi=0;
   if (fsrindex==0){
@@ -2319,54 +2333,54 @@ Double_t HiggsMassConstraint::d_m123_d_pTk(Int_t imass, Int_t kZ, Int_t kferm, I
 Double_t HiggsMassConstraint::d_m123_d_lambdak(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const{
   if((imass<2 && kZ!=imass) || imass<0 || imass>2) return 0;
 
-  Double_t mass=m[imass]->getVal();;
-  Double_t pj[4]={ 0 };
+  Double_t mass=m[imass]->getVal();
+  Double_t sum_pj[4]={ 0 };
   for(int iferm=0; iferm<2; iferm++){
-    pj[0] += px_Hdaughter[kZ][iferm]->getVal();
-    pj[1] += py_Hdaughter[kZ][iferm]->getVal();
-    pj[2] += pz_Hdaughter[kZ][iferm]->getVal();
-    pj[3] += E_Hdaughter[kZ][iferm]->getVal();
+    sum_pj[0] += px_Hdaughter[kZ][iferm]->getVal();
+    sum_pj[1] += py_Hdaughter[kZ][iferm]->getVal();
+    sum_pj[2] += pz_Hdaughter[kZ][iferm]->getVal();
+    sum_pj[3] += E_Hdaughter[kZ][iferm]->getVal();
   }
   if(imass==2){
     for(int iferm=0; iferm<2; iferm++){
-      pj[0] += px_Hdaughter[1-kZ][iferm]->getVal();
-      pj[1] += py_Hdaughter[1-kZ][iferm]->getVal();
-      pj[2] += pz_Hdaughter[1-kZ][iferm]->getVal();
-      pj[3] += E_Hdaughter[1-kZ][iferm]->getVal();
+      sum_pj[0] += px_Hdaughter[1-kZ][iferm]->getVal();
+      sum_pj[1] += py_Hdaughter[1-kZ][iferm]->getVal();
+      sum_pj[2] += pz_Hdaughter[1-kZ][iferm]->getVal();
+      sum_pj[3] += E_Hdaughter[1-kZ][iferm]->getVal();
     }
   }
 
   Double_t value = d_Ek_d_lambdak(kZ, kferm, fsrindex);
   if (mass!=0.){
-    value *= pj[3]/mass;
-    for (int j=0; j<3; j++) value -= pj[j]/mass*d_pjk_d_lambdak(kZ, kferm, fsrindex, j);
+    value *= sum_pj[3]/mass;
+    for (int j=0; j<3; j++) value -= sum_pj[j]/mass*d_pjk_d_lambdak(kZ, kferm, fsrindex, j);
   }
   return value;
 }
 Double_t HiggsMassConstraint::d_m123_d_phik(Int_t imass, Int_t kZ, Int_t kferm, Int_t fsrindex) const{
   if((imass<2 && kZ!=imass) || imass<0 || imass>2) return 0;
 
-  Double_t mass=m[imass]->getVal();;
-  Double_t pj[4]={ 0 };
+  Double_t mass=m[imass]->getVal();
+  Double_t sum_pj[4]={ 0 };
   for(int iferm=0; iferm<2; iferm++){
-    pj[0] += px_Hdaughter[kZ][iferm]->getVal();
-    pj[1] += py_Hdaughter[kZ][iferm]->getVal();
-    pj[2] += pz_Hdaughter[kZ][iferm]->getVal();
-    pj[3] += E_Hdaughter[kZ][iferm]->getVal();
+    sum_pj[0] += px_Hdaughter[kZ][iferm]->getVal();
+    sum_pj[1] += py_Hdaughter[kZ][iferm]->getVal();
+    sum_pj[2] += pz_Hdaughter[kZ][iferm]->getVal();
+    sum_pj[3] += E_Hdaughter[kZ][iferm]->getVal();
   }
   if(imass==2){
     for(int iferm=0; iferm<2; iferm++){
-      pj[0] += px_Hdaughter[1-kZ][iferm]->getVal();
-      pj[1] += py_Hdaughter[1-kZ][iferm]->getVal();
-      pj[2] += pz_Hdaughter[1-kZ][iferm]->getVal();
-      pj[3] += E_Hdaughter[1-kZ][iferm]->getVal();
+      sum_pj[0] += px_Hdaughter[1-kZ][iferm]->getVal();
+      sum_pj[1] += py_Hdaughter[1-kZ][iferm]->getVal();
+      sum_pj[2] += pz_Hdaughter[1-kZ][iferm]->getVal();
+      sum_pj[3] += E_Hdaughter[1-kZ][iferm]->getVal();
     }
   }
 
   Double_t value = d_Ek_d_phik(kZ, kferm, fsrindex);
   if (mass!=0.){
-    value *= pj[3]/mass;
-    for (int j=0; j<3; j++) value -= pj[j]*d_pjk_d_phik(kZ, kferm, fsrindex, j);
+    value *= sum_pj[3]/mass;
+    for (int j=0; j<3; j++) value -= sum_pj[j]/mass*d_pjk_d_phik(kZ, kferm, fsrindex, j);
   }
   return value;
 }
@@ -2374,17 +2388,28 @@ Double_t HiggsMassConstraint::d_m123_d_phik(Int_t imass, Int_t kZ, Int_t kferm, 
 Double_t HiggsMassConstraint::getRefittedMassError(Int_t imass) const{ // imass==0 is m1, imass==1 is m2, imass==2 is m12.
   Double_t value = 0;
   const Int_t NColCovMat=24;
-  if(fitCovMatrix.GetNcols()!=NColCovMat) return value; // This means the fit was not run.
+  if (fitCovMatrix.GetNcols()!=NColCovMat) return value; // This means the fit was not run.
+  vector<Double_t> jacArray;
+  for (int iZ=0; iZ<2; iZ++){
+    for (int iferm=0; iferm<2; iferm++){
+      for (int ifsr=0; ifsr<2; ifsr++){
+        Double_t d_m_d_pTk_ival = d_m123_d_pTk(imass, iZ, iferm, ifsr);
+        Double_t d_m_d_lambdak_ival = d_m123_d_lambdak(imass, iZ, iferm, ifsr);
+        Double_t d_m_d_phik_ival = d_m123_d_phik(imass, iZ, iferm, ifsr);
+
+        jacArray.push_back(d_m_d_pTk_ival);
+        jacArray.push_back(d_m_d_lambdak_ival);
+        jacArray.push_back(d_m_d_phik_ival);
+      }
+    }
+  }
+
   for (int iZ=0; iZ<2; iZ++){
     for (int iferm=0; iferm<2; iferm++){
       for (int ifsr=0; ifsr<2; ifsr++){
         Int_t ipt = 6*(2*iZ+iferm)+3*ifsr+0;
         Int_t ilambda = 6*(2*iZ+iferm)+3*ifsr+1;
         Int_t iphi = 6*(2*iZ+iferm)+3*ifsr+2;
-
-        Double_t d_m_d_pTk_ival = d_m123_d_pTk(imass, iZ, iferm, ifsr);
-        Double_t d_m_d_lambdak_ival = d_m123_d_lambdak(imass, iZ, iferm, ifsr);
-        Double_t d_m_d_phik_ival = d_m123_d_phik(imass, iZ, iferm, ifsr);
 
         for (int jZ=0; jZ<2; jZ++){
           for (int jferm=0; jferm<2; jferm++){
@@ -2393,26 +2418,46 @@ Double_t HiggsMassConstraint::getRefittedMassError(Int_t imass) const{ // imass=
               Int_t jlambda = 6*(2*jZ+jferm)+3*jfsr+1;
               Int_t jphi = 6*(2*jZ+jferm)+3*jfsr+2;
 
-              Double_t d_m_d_pTk_jval = d_m123_d_pTk(imass, jZ, jferm, jfsr);
-              Double_t d_m_d_lambdak_jval = d_m123_d_lambdak(imass, jZ, jferm, jfsr);
-              Double_t d_m_d_phik_jval = d_m123_d_phik(imass, jZ, jferm, jfsr);
-
-              value += (fitCovMatrix[ipt][jpt]) * d_m_d_pTk_ival * d_m_d_pTk_jval;
-              value += (fitCovMatrix[ipt][jlambda]) * d_m_d_pTk_ival * d_m_d_lambdak_jval;
-              value += (fitCovMatrix[ipt][jphi]) * d_m_d_pTk_ival * d_m_d_phik_jval;
-              value += (fitCovMatrix[ilambda][jpt]) * d_m_d_lambdak_ival * d_m_d_pTk_jval;
-              value += (fitCovMatrix[ilambda][jlambda]) * d_m_d_lambdak_ival * d_m_d_lambdak_jval;
-              value += (fitCovMatrix[ilambda][jphi]) * d_m_d_lambdak_ival * d_m_d_phik_jval;
-              value += (fitCovMatrix[iphi][jpt]) * d_m_d_phik_ival * d_m_d_pTk_jval;
-              value += (fitCovMatrix[iphi][jlambda]) * d_m_d_phik_ival * d_m_d_lambdak_jval;
-              value += (fitCovMatrix[iphi][jphi]) * d_m_d_phik_ival * d_m_d_phik_jval;
+              value += (fitCovMatrix[ipt][jpt]) * jacArray.at(ipt) * jacArray.at(jpt);
+              value += (fitCovMatrix[ipt][jlambda]) * jacArray.at(ipt) * jacArray.at(jlambda);
+              value += (fitCovMatrix[ipt][jphi]) * jacArray.at(ipt) * jacArray.at(jphi);
+              value += (fitCovMatrix[ilambda][jpt]) * jacArray.at(ilambda) * jacArray.at(jpt);
+              value += (fitCovMatrix[ilambda][jlambda]) * jacArray.at(ilambda) * jacArray.at(jlambda);
+              value += (fitCovMatrix[ilambda][jphi]) * jacArray.at(ilambda) * jacArray.at(jphi);
+              value += (fitCovMatrix[iphi][jpt]) * jacArray.at(iphi) * jacArray.at(jpt);
+              value += (fitCovMatrix[iphi][jlambda]) * jacArray.at(iphi) * jacArray.at(jlambda);
+              value += (fitCovMatrix[iphi][jphi]) * jacArray.at(iphi) * jacArray.at(jphi);
             }
           }
         }
       }
     }
   }
-  if (value<0.) value=0;
+
+  if (value<=0.){
+    cout << "HiggsMassConstraint::getRefittedMassError: m" << imass+1 << " error " << value << " is non-positive. Covariance matrix and derivatives used were:" << endl;
+    summarizeDaughters();
+    for (int ix=0; ix<24; ix++){
+      for (int iy=0; iy<24; iy++) cout << fitCovMatrix[ix][iy] << '\t';
+      cout << endl;
+    }
+    for (int iZ=0; iZ<2; iZ++){
+      for (int iferm=0; iferm<2; iferm++){
+        for (int ifsr=0; ifsr<2; ifsr++){
+          Int_t ipt = 6*(2*iZ+iferm)+3*ifsr+0;
+          Int_t ilambda = 6*(2*iZ+iferm)+3*ifsr+1;
+          Int_t iphi = 6*(2*iZ+iferm)+3*ifsr+2;
+
+          cout << "d_m" << imass+1 << "_d_pTk(" << iZ << "," << iferm << "," << ifsr << ") = " << jacArray.at(ipt) << endl;
+          cout << "d_m" << imass+1 << "_d_lambdak(" << iZ << "," << iferm << "," << ifsr << ") = " << jacArray.at(ilambda) << endl;
+          cout << "d_m" << imass+1 << "_d_phik(" << iZ << "," << iferm << "," << ifsr << ") = " << jacArray.at(iphi) << endl;
+        }
+      }
+    }
+    value=0;
+    //assert(0);
+  }
+
   value = sqrt(value);
   return value;
 }
