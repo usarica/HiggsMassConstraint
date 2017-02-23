@@ -108,23 +108,14 @@ public:
     FullCov_All_pTLambda,
     FullCov_All_pTPhi,
     FullCov_All_LambdaPhi,
-    FullCov_All_pT,
-    FullCov_All_Lambda,
-    FullCov_All_Phi,
     FullCov_NoFSR_pTLambdaPhi,
     FullCov_NoFSR_pTLambda,
     FullCov_NoFSR_pTPhi,
     FullCov_NoFSR_LambdaPhi,
-    FullCov_NoFSR_pT,
-    FullCov_NoFSR_Lambda,
-    FullCov_NoFSR_Phi,
     FullCov_OnlyFSR_pTLambdaPhi,
     FullCov_OnlyFSR_pTLambda,
     FullCov_OnlyFSR_pTPhi,
     FullCov_OnlyFSR_LambdaPhi,
-    FullCov_OnlyFSR_pT,
-    FullCov_OnlyFSRR_Lambda,
-    FullCov_OnlyFSR_Phi,
     CovDiagonals_All_pTLambdaPhi,
     CovDiagonals_All_pTLambda,
     CovDiagonals_All_pTPhi,
@@ -194,7 +185,7 @@ public:
   void setFastPDF(bool useFastPDF_=true);
 
   // Make sure each strategy is implemented correctly. Affects the behavior of covariance matrix extractions in addDaughters.
-  void setFitMomentumStrategy(HiggsMassConstraint::FitMomentumStrategy fitMomStrategy_=HiggsMassConstraint::/*FullCov_All_pTLambdaPhi*/FullCov_NoFSR_pT);
+  void setFitMomentumStrategy(HiggsMassConstraint::FitMomentumStrategy fitMomStrategy_=HiggsMassConstraint::/*FullCov_All_pTLambdaPhi*/CovDiagonals_NoFSR_pT);
   void setFitVVStrategy(HiggsMassConstraint::FitVVStrategy fitVVStrategy_=HiggsMassConstraint::Fit_All_V1);
   HiggsMassConstraint::FitMomentumStrategy getFitMomentumStrategy();
 
@@ -211,6 +202,7 @@ public:
   Double_t getRefittedLambdaError(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
   Double_t getRefittedPhiError(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
   TLorentzVector getRefittedMomentum(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
+  Double_t getObsMassError(Int_t imass) const;
   Double_t getObsPtError(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
   Double_t getObsLambdaError(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
   Double_t getObsPhiError(Int_t iZ, Int_t iferm, Int_t fsrindex) const;
@@ -256,6 +248,7 @@ protected:
   Double_t lambdacut_jet;
   Double_t pTcut_fsr;
   Double_t lambdacut_fsr;
+  Double_t initMassError[3];
   RooRealVar* m1lowcut;
   RooRealVar* m2lowcut;
   RooRealVar* m1highcut;
@@ -405,6 +398,9 @@ protected:
   
   void setInitialCovarianceMatrix(Int_t iZ, Int_t iferm, Int_t fsrindex, Double_t momCov[9]);
   void resetInitialCovarianceMatrix();
+
+  void setInitialMassErrors();
+  void resetInitialMassErrors();
 
   bool standardOrderedFinalCovarianceMatrix(const RooArgList& pars); // Re-order the covariance matrix from the fit, expand as necessary
   Int_t fitParameterCorrespondance(RooRealVar* par);
