@@ -26,6 +26,7 @@
 #include <ZZMatrixElement/MELA/interface/ScalarPdfFactory_HVV.h>
 #include "NCSplinePdfFactory_1D.h"
 #include "NCSplinePdfFactory_2D.h"
+#include "NCSplinePdfFactory_3D.h"
 
 using namespace RooFit;
 using namespace std;
@@ -36,6 +37,7 @@ const double m1Range[2]={ 40., 120. };
 const double m2Range[2]={ 12., 120. };
 const Int_t intCodeStart = RooSpin::prime_h1*RooSpin::prime_h2*RooSpin::prime_Phi*RooSpin::prime_hs*RooSpin::prime_Phi1;
 const bool recordPDFHisto=false;
+const bool doWS=false;
 
 TString savePlot(TString name, TCanvas* c);
 void splitOption(const string rawoption, string& wish, string& value, char delimiter);
@@ -44,14 +46,14 @@ Bool_t checkListVariable(const vector<string>& list, const string& var);
 Bool_t checkProjVar(const vector<string>& strprojvars, RooRealVar*& var, vector<RooRealVar*>* addArray=0);
 void addByLowest(double val, std::vector<double>& valArray);
 string set_gHVV(RooSpinZero::modelCouplings& couplings, string gSet);
-void getProjection_2D_single_HVV(string gSet, string decaytype, string strprojvar);
+void getProjection_3D_single_HVV(string gSet, string decaytype, string strprojvar);
 
-void getProjection_2D(){
+void getProjection_3D(){
   gSystem->Exec("mkdir -p ./plots");
-  getProjection_2D_single_HVV("ghz1=1,0", "ZZ4l", "m12:m1");
+  getProjection_3D_single_HVV("ghz1=1,0", "ZZ4l", "m12:m1:m2");
 }
 
-void getProjection_2D_single_HVV(string gSet, string decaytype, string strprojvar){
+void getProjection_3D_single_HVV(string gSet, string decaytype, string strprojvar){
   std::vector<RooRealVar*> projvars;
   vector<string> strprojvars;
   splitOptionRecursive(strprojvar, strprojvars, ':');
@@ -81,7 +83,7 @@ void getProjection_2D_single_HVV(string gSet, string decaytype, string strprojva
     if (projvars.at(ip)==m12) whichIsMH = ip;
   }
 
-  if (projvars.size()==2){
+  if (projvars.size()==3){
     gSystem->Exec(Form("mkdir -p ./plots/%s", outdir.Data()));
 
     RooSpin::modelMeasurables measurables;
@@ -150,16 +152,19 @@ void getProjection_2D_single_HVV(string gSet, string decaytype, string strprojva
 
     cout << "Will compute mH=\n";
     vector<double> masses;
-    double massmin=(int)(m1Range[0]+m2Range[0]+m1m2_BinWidth+0.5);
+    double massmin=152;
+    //double massmin=(int)(m1Range[0]+m2Range[0]+m1m2_BinWidth+0.5);
     double mass=massmin;
-    while (mass<=15000){
+    while (mass<=158){
+    //while (mass<=15000){
       cout << mass << "\n";
       masses.push_back(mass);
       double massinc;
-      if (mass<200.) massinc=1;
-      else if (mass<600.) massinc=10.;
-      else if (mass<1500.) massinc=50.;
-      else if (mass<3000.) massinc=100.;
+      if (mass<197.) massinc=2;
+      else if (mass<200.) massinc=3;
+      else if (mass<600.) massinc=20.;
+      else if (mass<1500.) massinc=100.;
+      else if (mass<3000.) massinc=250.;
       else if (mass<10000.) massinc=500.;
       else massinc=1000.;
       mass += massinc;
@@ -223,173 +228,246 @@ void getProjection_2D_single_HVV(string gSet, string decaytype, string strprojva
       if (!checkProjVar(strprojvars, Phi1, 0) && measurables.Phi1!=0) intSet.add(*(measurables.Phi1));
       if (!checkProjVar(strprojvars, Y, 0) && measurables.Y!=0) intSet.add(*(measurables.Y));
     }
-    cout << "Integration variables:\n";
-    intSet.Print("v");
-    cout << endl;
 
     RooRealIntegral* pdf_int=0;
-    if (intSet.getSize()>0) pdf_int = new RooRealIntegral(Form("pdf_proj_%s", outdir.Data()), "", *pdf, intSet);
-    if (pdf_int!=0){
-      delete pdf_int; // Delete dummy integration. Need to create at each mPOLE to optimize integration.
-
-      double mPOLE = 125.;
-      vector<doubleTriplet_t> points;
-      vector<unsigned int> ndim; for (unsigned int iv=0; iv<projvals.size(); iv++) ndim.push_back(projvals.at(iv).size());
-
-      double* dim = new double[projvars.size()];
-      double fcn = 0;
-      double spfcn0=0;
-      double spfcn=0;
-
-      TFile* foutput = TFile::Open(Form("H%sDecay_%sProjection_NoInterf_%s%s", decaytype.c_str(), outdir.Data(), strcoupl.c_str(), ".root"), "recreate");
-      TTree* pointsTree = new TTree("points", "");
-      for (unsigned int iv=0; iv<projvars.size(); iv++) pointsTree->Branch(Form("d%i", (int)iv+1), &(dim[iv]));
-      pointsTree->Branch("fcn", &fcn);
-      pointsTree->Branch("spfcn", &spfcn);
-      pointsTree->Branch("spfcn0", &spfcn0);
-
-      m12->setConstant(false);
-      m12->setVal(mPOLE);
-      m12->setConstant(true);
-
+    if (intSet.getSize()>0){
+      cout << "Integration variables:\n";
+      intSet.Print("v");
+      cout << endl;
       pdf_int = new RooRealIntegral(Form("pdf_proj_%s", outdir.Data()), "", *pdf, intSet);
-      for (unsigned int ix=0; ix<ndim[0]; ix++){
-        dim[0]=projvals.at(0).at(ix);
-        projvars.at(0)->setConstant(false);
-        projvars.at(0)->setVal(dim[0]);
-        projvars.at(0)->setConstant(true);
-        for (unsigned int iy=0; iy<ndim[1]; iy++){
-          dim[1]=projvals.at(1).at(iy);
-          projvars.at(1)->setConstant(false);
-          projvars.at(1)->setVal(dim[1]);
-          projvars.at(1)->setConstant(true);
-          fcn = pdf_int->getVal();
-          points.push_back(doubleTriplet_t(dim[0], dim[1], fcn));
-        }
+    }
 
-        // Calculate Riemann integral for xcheck
-        Double_t manualIntegral=0;
-        for (unsigned int iy=0; iy<ndim[1]-1; iy++){
-          unsigned int ip = ix*ndim[1]+iy;
-          unsigned int ip_ypo = ip+1;
-          manualIntegral += 0.5*(points.at(ip_ypo)[2]+points.at(ip)[2])*(points.at(ip_ypo)[1]-points.at(ip)[1]);
-        }
-        cout << "Original Riemann integral of PDF at " << projvars.at(0)->GetName() << "=" << projvals.at(0).at(ix) << ": " << manualIntegral << endl;
-      }
+    if (pdf_int!=0){
+      cout << "Starting pdf integration" << endl;
+      delete pdf_int; // Delete dummy integration. Need to create at each mPOLE to optimize integration.
+    }
 
-      TString gifCmd;
+    double mPOLE = 125.;
+    vector<doubleQuadruplet_t> points;
+    vector<unsigned int> ndim; for (unsigned int iv=0; iv<projvals.size(); iv++) ndim.push_back(projvals.at(iv).size());
 
-      NCSplinePdfFactory_2D* spFactory = new NCSplinePdfFactory_2D(projvars.at(0), projvars.at(1));
-      spFactory->setPoints(points);
-      RooNCSplinePdf_2D_fast* spPDF = spFactory->getPDF();
+    double* dim = new double[projvars.size()];
+    double fcn = 0;
+    double spfcn0=0;
+    double spfcn=0;
 
+    TFile* foutput = TFile::Open(Form("H%sDecay_%sProjection_NoInterf_%s%s", decaytype.c_str(), outdir.Data(), strcoupl.c_str(), ".root"), "recreate");
+    TTree* pointsTree = new TTree("points", "");
+    for (unsigned int iv=0; iv<projvars.size(); iv++) pointsTree->Branch(Form("d%i", (int)iv+1), &(dim[iv]));
+    pointsTree->Branch("fcn", &fcn);
+    pointsTree->Branch("spfcn", &spfcn);
+    pointsTree->Branch("spfcn0", &spfcn0);
+
+    m12->setConstant(false);
+    m12->setVal(mPOLE);
+    m12->setConstant(true);
+
+    if (intSet.getSize()>0) pdf_int = new RooRealIntegral(Form("pdf_proj_%s", outdir.Data()), "", *pdf, intSet);
+    for (unsigned int ix=0; ix<ndim[0]; ix++){
+      dim[0]=projvals.at(0).at(ix);
       projvars.at(0)->setConstant(false);
-      projvars.at(1)->setConstant(false);
-      RooRealIntegral* spPDFint = 0;
-      RooArgSet splineIntvars;
-      if (whichIsMH>=0){
-        for (unsigned int ip=0; ip<projvars.size(); ip++){ if ((int)ip!=whichIsMH) splineIntvars.add(*(projvars.at(ip))); }
-        cout << "Spline integration vars except m4l:" << endl;
-        splineIntvars.Print("v");
-        spPDFint = new RooRealIntegral("spPDFint", "", *spPDF, splineIntvars);
+      projvars.at(0)->setVal(dim[0]);
+      projvars.at(0)->setConstant(true);
+      for (unsigned int iy=0; iy<ndim[1]; iy++){
+        dim[1]=projvals.at(1).at(iy);
+        projvars.at(1)->setConstant(false);
+        projvars.at(1)->setVal(dim[1]);
+        projvars.at(1)->setConstant(true);
+        for (unsigned int iz=0; iz<ndim[2]; iz++){
+          dim[2]=projvals.at(2).at(iz);
+          projvars.at(2)->setConstant(false);
+          projvars.at(2)->setVal(dim[2]);
+          projvars.at(2)->setConstant(true);
+          if (pdf_int!=0) fcn = pdf_int->getVal();
+          else fcn = pdf->getVal();
+          //if (fcn>1e-15) cout << dim[0] << " " << dim[1] << " " << dim[2] << " " << fcn << endl;
+          points.push_back(doubleQuadruplet_t(dim[0], dim[1], dim[2], fcn));
+        }
       }
 
-      for (unsigned int ix=0; ix<ndim[0]; ix++){
+      // Calculate Riemann integral for xcheck
+      Double_t manualIntegral=0;
+      for (unsigned int iy=0; iy<ndim[1]-1; iy++){
+        for (unsigned int iz=0; iz<ndim[2]-1; iz++){
+          unsigned int ip = (ix*ndim[1]+iy)*ndim[2]+iz;
+          unsigned int ip_ypo = ip+ndim[2];
+          unsigned int ip_ypo_zpo = ip+ndim[2]+1;
+          unsigned int ip_zpo = ip+1;
+          manualIntegral += 0.25*(points.at(ip_ypo)[3]+points.at(ip_zpo)[3]+points.at(ip_ypo_zpo)[3]+points.at(ip)[3])*(points.at(ip_ypo)[1]-points.at(ip)[1])*(points.at(ip_zpo)[2]-points.at(ip)[2]);
+        }
+      }
+      cout << "Original Riemann integral of PDF at " << projvars.at(0)->GetName() << "=" << projvals.at(0).at(ix) << ": " << manualIntegral << endl;
+    }
+
+    TString gifCmd;
+
+    cout << "Constructing 3D spline" << endl;
+    NCSplinePdfFactory_3D* spFactory = new NCSplinePdfFactory_3D(projvars.at(0), projvars.at(1), projvars.at(2));
+    cout << "Setting 3D spline points" << endl;
+    spFactory->setPoints(points);
+    cout << "Done" << endl;
+    RooNCSplinePdf_3D_fast* spPDF = spFactory->getPDF();
+
+    if (doWS){
+      TFile* fws = TFile::Open(Form("H%sDecay_%sProjection_NoInterf_%s_WS%s", decaytype.c_str(), outdir.Data(), strcoupl.c_str(), ".root"), "recreate");
+      RooWorkspace* ws = new RooWorkspace("w", "");
+      ws->addClassDeclImportDir("../interface/");
+      ws->importClassCode(RooNCSplinePdf_3D_fast::Class(), true);
+      ws->import(*spPDF, RooFit::RecycleConflictNodes());
+      fws->WriteTObject(ws);
+      delete ws;
+      fws->Close();
+    }
+    projvars.at(0)->setConstant(false);
+    projvars.at(1)->setConstant(false);
+    projvars.at(2)->setConstant(false);
+    RooRealIntegral* spPDFint = 0;
+    RooArgSet splineIntvars;
+    if (whichIsMH>=0){
+      for (unsigned int ip=0; ip<projvars.size(); ip++){ if ((int)ip!=whichIsMH) splineIntvars.add(*(projvars.at(ip))); }
+      cout << "Spline integration vars except m4l:" << endl;
+      splineIntvars.Print("v");
+      spPDFint = new RooRealIntegral("spPDFint", "", *spPDF, splineIntvars);
+    }
+
+    {
+      Double_t integral=0;
+      int ifirst = (whichIsMH>=0 ? whichIsMH : 0);
+      int isecond = (ifirst+1)%3;
+      int ithird = (ifirst+2)%3;
+      for (unsigned int ix=0; ix<ndim[ifirst]; ix++){
+        dim[ifirst]=projvals.at(ifirst).at(ix);
+        projvars.at(ifirst)->setVal(dim[ifirst]);
+
         Double_t manualIntegral=0;
-        for (unsigned int iy=0; iy<ndim[1]; iy++){
-          unsigned int ip = ix*ndim[1]+iy;
+        if (spPDFint!=0) integral = spPDFint->getVal();
+        for (unsigned int iy=0; iy<ndim[isecond]; iy++){
+          dim[isecond]=projvals.at(isecond).at(iy);
+          projvars.at(isecond)->setVal(dim[isecond]);
 
-          dim[0] = points.at(ip)[0];
-          dim[1] = points.at(ip)[1];
-          fcn = points.at(ip)[2];
+          for (unsigned int iz=0; iz<ndim[ithird]; iz++){
+            dim[ithird]=projvals.at(ithird).at(iz);
+            projvars.at(ithird)->setVal(dim[ithird]);
 
-          projvars.at(0)->setVal(dim[0]);
-          projvars.at(1)->setVal(dim[1]);
+            unsigned int ip;
+            unsigned int ipcode[3];
+            if (ifirst==2) ipcode[0] = iz;
+            else if (ifirst==1) ipcode[0] = iy;
+            else ipcode[0] = ix;
+            if (isecond==2) ipcode[1] = iz;
+            else if (isecond==1) ipcode[1] = iy;
+            else ipcode[1] = ix;
+            if (ithird==2) ipcode[2] = iz;
+            else if (ithird==1) ipcode[2] = iy;
+            else ipcode[2] = ix;
+            ip = (ipcode[0]*ndim[1]+ipcode[1])*ndim[2]+ipcode[2];
 
-          spfcn0 = spPDF->getVal();
-          spfcn = spfcn0;
-          if (spPDFint!=0){
-            double integral = spPDFint->getVal();
-            spfcn /= integral;
-            points.at(ip)[2] /= integral;
+            fcn = points.at(ip)[3];
+
+
+            spfcn0 = spPDF->getVal();
+            spfcn = spfcn0;
+            if (spPDFint!=0){
+              spfcn /= integral;
+              points.at(ip)[3] /= integral;
+            }
+            pointsTree->Fill();
           }
-          pointsTree->Fill();
         }
 
         for (unsigned int iy=0; iy<ndim[1]-1; iy++){
-          unsigned int ip = ix*ndim[1]+iy;
-          unsigned int ip_ypo = ip+1;
-          manualIntegral += 0.5*(points.at(ip_ypo)[2]+points.at(ip)[2])*(points.at(ip_ypo)[1]-points.at(ip)[1]);
+          for (unsigned int iz=0; iz<ndim[2]-1; iz++){
+            unsigned int ip = (ix*ndim[1]+iy)*ndim[2]+iz;
+            unsigned int ip_ypo = ip+ndim[2];
+            unsigned int ip_ypo_zpo = ip+ndim[2]+1;
+            unsigned int ip_zpo = ip+1;
+            manualIntegral += 0.25*(points.at(ip_ypo)[3]+points.at(ip_zpo)[3]+points.at(ip_ypo_zpo)[3]+points.at(ip)[3])*(points.at(ip_ypo)[1]-points.at(ip)[1])*(points.at(ip_zpo)[2]-points.at(ip)[2]);
+          }
         }
         cout << "Renormalized Riemann integral of (spline) PDF at " << projvars.at(0)->GetName() << "=" << projvals.at(0).at(ix) << ": " << manualIntegral << endl;
       }
-      if (spPDFint!=0){
-        delete spPDFint;
-        spFactory->setPoints(points); // Reset spline points such that they are normalized along the m4l slices
-        spPDF = spFactory->getPDF();
-      }
-      foutput->WriteTObject(pointsTree);
-      delete pointsTree;
-
-      if (whichIsMH>=0){
-        mPOLE = 155.36;
-        //mPOLE = 155;
-        cout << "Plotting PDFs for central value " << mPOLE << endl;
-        m12->setVal(mPOLE);
-        m12->setConstant(true);
-
-        spPDFint = new RooRealIntegral("spPDFint", "", *spPDF, splineIntvars);
-        double spint = spPDFint->getVal();
-        cout << "Spline integral at mH = " << mPOLE << ": " << spint << endl;
-        delete spPDFint;
-
-        RooPlot* plot = projvars.at(1-whichIsMH)->frame(projvals.at(1-whichIsMH).size()-1);
-        plot->GetXaxis()->CenterTitle();
-        plot->GetYaxis()->SetTitleOffset(1.2);
-        plot->GetYaxis()->CenterTitle();
-        plot->GetXaxis()->SetTitle(projvars.at(1-whichIsMH)->GetTitle());
-        plot->GetYaxis()->SetTitle(Form("H%s amplitude", decaytype.c_str()));
-        plot->GetXaxis()->SetNdivisions(-505);
-        plot->SetTitle(Form("Projection at mH=%.2f GeV", mPOLE));
-        //spPDF->setVerbosity(RooNCSplinePdfCore::kVerbose);
-        spPDF->plotOn(plot, LineColor(kRed), LineWidth(2));
-        pdf->plotOn(plot, LineColor(kBlack), LineWidth(2), LineStyle(2), Project(intSet));
-
-        m12->setConstant(false);
-        mPOLE = (int)mPOLE;
-        m12->setVal(mPOLE);
-        m12->setConstant(true);
-        cout << "Plotting PDF for edge value " << mPOLE << endl;
-        pdf->plotOn(plot, LineColor(kBlue), LineWidth(2), LineStyle(2), Project(intSet));
-        m12->setConstant(false);
-        mPOLE = mPOLE+1.;
-        m12->setVal(mPOLE);
-        m12->setConstant(true);
-        cout << "Plotting PDF for edge value " << mPOLE << endl;
-        pdf->plotOn(plot, LineColor(kGreen+2), LineWidth(2), LineStyle(2), Project(intSet));
-
-        TCanvas* canvas = new TCanvas(Form("c_%s", outdir.Data()), "", 800, 800);
-        plot->Draw();
-        canvas->Modified();
-        canvas->Update();
-        foutput->WriteTObject(canvas);
-        gifCmd += savePlot(outdir, canvas);
-        gifCmd += " ";
-        canvas->Close();
-        delete plot;
-      }
-      delete spFactory;
-      delete pdf_int;
-      foutput->Close();
-      /*
-      if (gifCmd!=""){
-        gifCmd.Prepend("convert ");
-        gifCmd.Append(Form("./plots/%s/all.gif", projvar->GetName()));
-        gSystem->Exec(gifCmd);
-      }
-      */
-      delete[] dim;
     }
+    if (spPDFint!=0){
+      delete spPDFint;
+      spFactory->setPoints(points); // Reset spline points such that they are normalized along the m4l slices
+      spPDF = spFactory->getPDF();
+    }
+    foutput->WriteTObject(pointsTree);
+    delete pointsTree;
+
+    if (whichIsMH>=0){
+      unsigned int chosenVar = (whichIsMH+1)%3;
+
+      RooArgSet projSet;
+      for (unsigned int ip=0; ip<projvars.size(); ip++){
+        if (ip==chosenVar || (int)ip==whichIsMH) continue;
+        projSet.add(*(projvars.at(ip)));
+      }
+      cout << "Projection variables:\n";
+      projSet.Print("v");
+      cout << endl;
+
+      mPOLE = 155.36;
+      //mPOLE = 155;
+      cout << "Plotting PDFs for central value " << mPOLE << endl;
+      m12->setVal(mPOLE);
+      m12->setConstant(true);
+
+      spPDFint = new RooRealIntegral("spPDFint", "", *spPDF, splineIntvars);
+      double spint = spPDFint->getVal();
+      cout << "Spline integral at mH = " << mPOLE << ": " << spint << endl;
+      delete spPDFint;
+
+      RooPlot* plot = projvars.at(1)->frame(projvals.at(1).size()-1);
+      plot->GetXaxis()->CenterTitle();
+      plot->GetYaxis()->SetTitleOffset(1.2);
+      plot->GetYaxis()->CenterTitle();
+      plot->GetXaxis()->SetTitle(projvars.at(1)->GetTitle());
+      plot->GetYaxis()->SetTitle(Form("H%s amplitude", decaytype.c_str()));
+      plot->GetXaxis()->SetNdivisions(-505);
+      plot->SetTitle(Form("Projection at mH=%.2f GeV", mPOLE));
+      spPDF->setVerbosity(RooNCSplinePdfCore::kVerbose);
+      cout << "Projecting spline" << endl;
+      spPDF->plotOn(plot, LineColor(kRed), LineWidth(2), LineStyle(1), Project(projSet));
+      cout << "Projecting mela" << endl;
+      pdf->plotOn(plot, LineColor(kBlack), LineWidth(2), LineStyle(2), Project(projSet));
+
+      m12->setConstant(false);
+      mPOLE = (int)mPOLE;
+      m12->setVal(mPOLE);
+      m12->setConstant(true);
+      cout << "Plotting PDF for edge value " << mPOLE << endl;
+      pdf->plotOn(plot, LineColor(kBlue), LineWidth(2), LineStyle(2), Project(projSet));
+      m12->setConstant(false);
+      mPOLE = mPOLE+1.;
+      m12->setVal(mPOLE);
+      m12->setConstant(true);
+      cout << "Plotting PDF for edge value " << mPOLE << endl;
+      pdf->plotOn(plot, LineColor(kGreen+2), LineWidth(2), LineStyle(2), Project(projSet));
+
+      TCanvas* canvas = new TCanvas(Form("c_%s", outdir.Data()), "", 800, 800);
+      plot->Draw();
+      canvas->Modified();
+      canvas->Update();
+      foutput->WriteTObject(canvas);
+      gifCmd += savePlot(outdir, canvas);
+      gifCmd += " ";
+      canvas->Close();
+      delete plot;
+    }
+    
+
+    delete spFactory;
+    if (pdf_int!=0) delete pdf_int;
+    foutput->Close();
+    /*
+    if (gifCmd!=""){
+    gifCmd.Prepend("convert ");
+    gifCmd.Append(Form("./plots/%s/all.gif", projvar->GetName()));
+    gSystem->Exec(gifCmd);
+    }
+    */
+    delete[] dim;
 
     delete someHiggs;
   }

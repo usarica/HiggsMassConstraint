@@ -17,50 +17,21 @@ using namespace std;
 
 RooNCSplinePdf_1D::RooNCSplinePdf_1D() :
 RooNCSplinePdfCore(),
-theXVar("theXVar", "theXVar", this),
-XList("XList", "List of X coordinates", this),
-FcnList("FcnList", "List of function coordinates", this),
-npointsX(0)
+FcnList("FcnList", "List of function coordinates", this)
 {}
 
 RooNCSplinePdf_1D::RooNCSplinePdf_1D(
 const char* name,
 const char* title,
-RooAbsReal& inXVar,
-const RooArgList& inXList,
-const RooArgList& inFcnList
+RooAbsReal* inXVar,
+const RooArgList* inXList,
+const RooArgList* inFcnList,
+bool inUseConst
 ) :
-RooNCSplinePdfCore(name, title),
-theXVar("theXVar", "theXVar", this, inXVar),
-XList("XList", "List of X coordinates", this),
+RooNCSplinePdfCore(name, title, inXVar, inXList, inUseConst),
 FcnList("FcnList", "List of function coordinates", this)
 {
-  TIterator* coefIter = inXList.createIterator();
-  RooAbsArg* coef;
-  while ((coef = (RooAbsArg*)coefIter->Next())){
-    if (!dynamic_cast<RooAbsReal*>(coef)){
-      coutE(InputArguments) << "RooNCSplinePdf_1D ERROR::RooNCSplinePdf_1D(" << GetName() << ") X variable " << coef->GetName() << " is not of type RooAbsReal" << endl;
-      assert(0);
-    }
-    XList.add(*coef);
-  }
-  delete coefIter;
-
-  npointsX = XList.getSize();
-  if (npointsX<=1){
-    coutE(InputArguments) << "RooNCSplinePdf_1D ERROR::RooNCSplinePdf_1D(" << GetName() << ") npointsX " << npointsX << "<=1 cannot have a spline." << endl;
-    assert(0);
-  }
-
-  coefIter = inFcnList.createIterator();
-  while ((coef = (RooAbsArg*)coefIter->Next())){
-    if (!dynamic_cast<RooAbsReal*>(coef)){
-      coutE(InputArguments) << "RooNCSplinePdf_1D ERROR::RooNCSplinePdf_1D(" << GetName() << ") function variable " << coef->GetName() << " is not of type RooAbsReal" << endl;
-      assert(0);
-    }
-    FcnList.add(*coef);
-  }
-  delete coefIter;
+  setProxyList(inFcnList, FcnList);
 }
 
 RooNCSplinePdf_1D::RooNCSplinePdf_1D(
@@ -68,10 +39,7 @@ RooNCSplinePdf_1D::RooNCSplinePdf_1D(
   const char* name
   ) :
   RooNCSplinePdfCore(other, name),
-  theXVar("theXVar", this, other.theXVar),
-  XList("XList", this, other.XList),
-  FcnList("FcnList", this, other.FcnList),
-  npointsX(other.npointsX)
+  FcnList("FcnList", this, other.FcnList)
 {}
 
 Double_t RooNCSplinePdf_1D::interpolateFcn(Int_t code, const char* rangeName)const{

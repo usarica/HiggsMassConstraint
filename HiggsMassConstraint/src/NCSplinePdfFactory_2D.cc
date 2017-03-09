@@ -15,7 +15,10 @@ NCSplinePdfFactory_2D::~NCSplinePdfFactory_2D(){
 void NCSplinePdfFactory_2D::destroyPoints(){
   for (unsigned int ip=0; ip<Xcoord.size(); ip++) delete Xcoord.at(ip);
   for (unsigned int ip=0; ip<Ycoord.size(); ip++) delete Ycoord.at(ip);
-  for (unsigned int ip=0; ip<FcnVal.size(); ip++) delete FcnVal.at(ip);
+  for (unsigned int iy=0; iy<FcnVal.size(); iy++){
+    for (unsigned int ix=0; ix<FcnVal.at(iy).size(); ix++) delete FcnVal.at(iy).at(ix);
+    FcnVal.at(iy).clear();
+  }
   Xcoord.clear(); Ycoord.clear(); FcnVal.clear();
 }
 void NCSplinePdfFactory_2D::setPoints(const std::vector<doubleTriplet_t>& pList){
@@ -33,23 +36,19 @@ void NCSplinePdfFactory_2D::initPoints(const std::vector<doubleTriplet_t>& pList
   unsigned int n = pList.size();
   vector<Double_t> Xval;
   vector<Double_t> Yval;
-  vector<Double_t> Fcnval;
+  vector<vector<Double_t>> Fcnval;
   for (unsigned int ip=0; ip<n; ip++){
     addUnique(Xval, (pList.at(ip))[0]);
     addUnique(Yval, (pList.at(ip))[1]);
-    Fcnval.push_back((pList.at(ip))[2]); // Do not use unique here
   }
-  /*
-  cout << "NCSplinePdfFactory_2D::initPoints: xpoints[ " << Xval.size() << "] =";
-  for (unsigned int ip=0; ip<Xval.size(); ip++) cout << " " << Xval.at(ip);
-  cout << endl;
-  cout << "NCSplinePdfFactory_2D::initPoints: ypoints[ " << Yval.size() << "] =";
-  for (unsigned int ip=0; ip<Yval.size(); ip++) cout << " " << Yval.at(ip);
-  cout << endl;
-  cout << "NCSplinePdfFactory_2D::initPoints: fcn[ " << Fcnval.size() << "] =";
-  for (unsigned int ip=0; ip<Fcnval.size(); ip++) cout << " " << Fcnval.at(ip);
-  cout << endl;
-  */
+  for (unsigned int iy=0; iy<Yval.size(); iy++){
+    vector<Double_t> dum;
+    Fcnval.push_back(dum);
+    for (unsigned int ix=0; ix<Xval.size(); ix++){
+      unsigned int ip = Yval.size()*ix + iy;
+      Fcnval.at(iy).push_back((pList.at(ip))[2]); // Do not use unique here
+    }
+  }
   for (unsigned int ip=0; ip<Xval.size(); ip++){
     TString name = Form("point_x_%i", ip);
     if (appendName!="") name = Form("%s_%s", name.Data(), appendName.Data());
@@ -62,11 +61,15 @@ void NCSplinePdfFactory_2D::initPoints(const std::vector<doubleTriplet_t>& pList
     RooConstVar* var = new RooConstVar(name, name, Yval.at(ip));
     Ycoord.push_back(var);
   }
-  for (unsigned int ip=0; ip<Fcnval.size(); ip++){
-    TString name = Form("point_fcn_%i", ip);
-    if (appendName!="") name = Form("%s_%s", name.Data(), appendName.Data());
-    RooConstVar* var = new RooConstVar(name, name, Fcnval.at(ip));
-    FcnVal.push_back(var);
+  for (unsigned int iy=0; iy<Fcnval.size(); iy++){
+    vector<RooConstVar*> dum;
+    FcnVal.push_back(dum);
+    for (unsigned int ix=0; ix<Fcnval.at(iy).size(); ix++){
+      TString name = Form("point_fcn_Y%iX%i", iy, ix);
+      if (appendName!="") name = Form("%s_%s", name.Data(), appendName.Data());
+      RooConstVar* var = new RooConstVar(name, name, Fcnval.at(iy).at(ix));
+      FcnVal.at(iy).push_back(var);
+    }
   }
 }
 
@@ -76,10 +79,14 @@ void NCSplinePdfFactory_2D::initPDF(){
 
   RooArgList XList;
   RooArgList YList;
-  RooArgList FcnList;
+  vector<const RooArgList*> FcnList;
   for (unsigned int ip=0; ip<Xcoord.size(); ip++) XList.add(*(Xcoord.at(ip)));
   for (unsigned int ip=0; ip<Ycoord.size(); ip++) YList.add(*(Ycoord.at(ip)));
-  for (unsigned int ip=0; ip<FcnVal.size(); ip++) FcnList.add(*(FcnVal.at(ip)));
+  for (unsigned int iy=0; iy<FcnVal.size(); iy++){
+    RooArgList* list = new RooArgList();
+    for (unsigned int ix=0; ix<FcnVal.at(iy).size(); ix++) list->add(*(FcnVal.at(iy).at(ix)));
+    FcnList.push_back(list);
+  }
 
   TString name = "PDF";
   if (appendName!="") name = Form("%s_%s", name.Data(), appendName.Data());
@@ -87,10 +94,11 @@ void NCSplinePdfFactory_2D::initPDF(){
   PDF = new RooNCSplinePdf_2D_fast(
     name.Data(),
     title.Data(),
-    *XVar, *YVar,
-    XList,
-    YList,
+    XVar, YVar,
+    &XList, &YList,
     FcnList
     );
+
+  for (unsigned int iy=0; iy<FcnList.size(); iy++) delete FcnList.at(iy);
 }
 RooNCSplinePdf_2D_fast* NCSplinePdfFactory_2D::getPDF(){ return PDF; }

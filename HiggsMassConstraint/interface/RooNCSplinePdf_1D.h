@@ -5,31 +5,22 @@
 #include "RooAbsPdf.h"
 #include "RooRealProxy.h"
 #include "RooRealVar.h"
-#include "RooCategoryProxy.h"
 #include "RooAbsReal.h"
-#include "RooAbsCategory.h"
-#include "TH3F.h"
-#include "TH1.h"
-#include "RooDataHist.h"
-#include "RooHistFunc.h"
 #include "RooNCSplinePdfCore.h"
 
 class RooNCSplinePdf_1D : public RooNCSplinePdfCore{
 protected:
-
-	RooRealProxy theXVar;
-  RooListProxy XList; // List of X values
   RooListProxy FcnList; // List of function values
-  Int_t npointsX;
 
 public:
   RooNCSplinePdf_1D();
   RooNCSplinePdf_1D(
     const char* name,
     const char* title,
-    RooAbsReal& inXVar,
-    const RooArgList& inXList,
-    const RooArgList& inFcnList
+    RooAbsReal* inXVar,
+    const RooArgList* inXList,
+    const RooArgList* inFcnList,
+    bool inUseConst=false
     );
   RooNCSplinePdf_1D(const RooNCSplinePdf_1D& other, const char* name=0);
 	virtual TObject* clone(const char* newname)const { return new RooNCSplinePdf_1D(*this, newname); }

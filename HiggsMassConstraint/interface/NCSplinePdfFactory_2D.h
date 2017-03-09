@@ -35,7 +35,7 @@ protected:
 
   std::vector<RooConstVar*> Xcoord;
   std::vector<RooConstVar*> Ycoord;
-  std::vector<RooConstVar*> FcnVal;
+  std::vector<std::vector<RooConstVar*>> FcnVal;
 
 public:
   NCSplinePdfFactory_2D(RooAbsReal* XVar_, RooAbsReal* YVar_, TString appendName_="");

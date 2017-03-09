@@ -3,15 +3,11 @@
 
 #include <vector>
 #include "RooAbsPdf.h"
-#include "RooRealProxy.h"
-#include "RooRealVar.h"
-#include "RooCategoryProxy.h"
 #include "RooAbsReal.h"
-#include "RooAbsCategory.h"
-#include "TH3F.h"
-#include "TH1.h"
-#include "RooDataHist.h"
-#include "RooHistFunc.h"
+#include "RooRealVar.h"
+#include "RooRealProxy.h"
+#include "RooConstVar.h"
+#include "RooArgList.h"
 
 class RooNCSplinePdfCore : public RooAbsPdf{
 public:
@@ -25,6 +21,13 @@ public:
     const char* name,
     const char* title
     );
+  RooNCSplinePdfCore(
+    const char* name,
+    const char* title,
+    RooAbsReal* inXVar,
+    const RooArgList* inXList,
+    bool inUseConst=false
+    );
   RooNCSplinePdfCore(const RooNCSplinePdfCore& other, const char* name=0);
   virtual TObject* clone(const char* newname)const=0;
   inline virtual ~RooNCSplinePdfCore(){}
@@ -33,6 +36,13 @@ public:
 
 protected:
   VerbosityLevel verbosity;
+  const Bool_t useConst;
+
+  RooRealProxy theXVar;
+  RooListProxy XList;
+  Int_t npointsX;
+
+  virtual void setProxyList(const RooArgList* list, RooListProxy& proxy);
 
   virtual Int_t getWhichBin(const Double_t& val, const Int_t whichDirection)const = 0;
   virtual void getKappa(std::vector<Double_t>& kappas, const Int_t whichDirection)const = 0;

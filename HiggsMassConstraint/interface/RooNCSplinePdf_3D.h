@@ -1,5 +1,5 @@
-#ifndef ROONCSPLINEPDF_2D
-#define ROONCSPLINEPDF_2D
+#ifndef ROONCSPLINEPDF_3D
+#define ROONCSPLINEPDF_3D
 
 #include <vector>
 #include "RooAbsPdf.h"
@@ -8,36 +8,45 @@
 #include "RooAbsReal.h"
 #include "RooNCSplinePdfCore.h"
 
-class RooNCSplinePdf_2D : public RooNCSplinePdfCore{
+class RooNCSplinePdf_3D : public RooNCSplinePdfCore{
 protected:
   RooRealProxy theYVar;
+  RooRealProxy theZVar;
   RooListProxy YList;
+  RooListProxy ZList;
   Int_t npointsY;
+  Int_t npointsZ;
 
-  std::vector<RooListProxy> FcnList;
+  std::vector<std::vector<RooListProxy>> FcnList;
 
 public:
-  RooNCSplinePdf_2D();
-  RooNCSplinePdf_2D(
+  RooNCSplinePdf_3D();
+  RooNCSplinePdf_3D(
     const char* name,
     const char* title,
     RooAbsReal* inXVar,
     RooAbsReal* inYVar,
+    RooAbsReal* inZVar,
     const RooArgList* inXList,
     const RooArgList* inYList,
-    std::vector<const RooArgList*>& inFcnList,
+    const RooArgList* inZList,
+    std::vector<std::vector<const RooArgList*>>& inFcnList,
     bool inUseConst=false
     );
-  RooNCSplinePdf_2D(const RooNCSplinePdf_2D& other, const char* name=0);
-	virtual TObject* clone(const char* newname)const { return new RooNCSplinePdf_2D(*this, newname); }
-	inline virtual ~RooNCSplinePdf_2D(){}
+  RooNCSplinePdf_3D(const RooNCSplinePdf_3D& other, const char* name=0);
+	virtual TObject* clone(const char* newname)const { return new RooNCSplinePdf_3D(*this, newname); }
+	inline virtual ~RooNCSplinePdf_3D(){}
 
 protected:
   virtual Int_t getWhichBin(const Double_t& val, const Int_t whichDirection)const;
   virtual Double_t getTVar(const std::vector<Double_t>& kappas, const Double_t& val, const Int_t& bin, const Int_t whichDirection)const;
   virtual void getKappa(std::vector<Double_t>& kappas, const Int_t whichDirection)const;
 
-  virtual std::vector<std::vector<Double_t>> getCoefficientsPerY(const std::vector<Double_t>& kappaX, const TMatrixD& xAinv, const Int_t& ybin, const Int_t xbin)const; // xbin can be -1, which means push all of them
+  virtual std::vector<std::vector<Double_t>> getCoefficientsPerYPerZ(
+    const std::vector<Double_t>& kappaX, const TMatrixD& xAinv,
+    const Int_t& ybin, const Int_t& zbin,
+    const Int_t xbin
+    )const; // xbin can be -1, which means push all of them
 
   virtual Double_t interpolateFcn(Int_t code, const char* rangeName=0)const;
   virtual Double_t evaluate()const;
@@ -45,7 +54,7 @@ protected:
   virtual Double_t analyticalIntegral(Int_t code, const char* rangeName=0)const;
 
 private:
-  ClassDef(RooNCSplinePdf_2D, 1)
+  ClassDef(RooNCSplinePdf_3D, 1)
 };
  
 #endif

@@ -52,10 +52,10 @@ void NCSplinePdfFactory_1D::destroyPDF(){ delete PDF; PDF=0; }
 void NCSplinePdfFactory_1D::initPDF(){
   destroyPDF();
 
-  RooArgList XList, YList;
+  RooArgList XList, FcnList;
   for (unsigned int ip=0; ip<points.size(); ip++){
     XList.add(*(points.at(ip).first));
-    YList.add(*(points.at(ip).second));
+    FcnList.add(*(points.at(ip).second));
   }
 
   TString name = "PDF";
@@ -64,9 +64,9 @@ void NCSplinePdfFactory_1D::initPDF(){
   PDF = new RooNCSplinePdf_1D_fast(
     name.Data(),
     title.Data(),
-    *splineVar,
-    XList,
-    YList
+    splineVar,
+    &XList,
+    &FcnList
     );
 }
 RooNCSplinePdf_1D_fast* NCSplinePdfFactory_1D::getPDF(){ return PDF; }

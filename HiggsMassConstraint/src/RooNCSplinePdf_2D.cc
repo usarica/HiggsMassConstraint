@@ -8,6 +8,7 @@
 #include "TMath.h"
 #include "TMatrixD.h"
 #include "TVectorD.h"
+#include "TString.h"
 #include "RooDataHist.h"
 
 using namespace TMath;
@@ -16,7 +17,8 @@ using namespace std;
 
 
 RooNCSplinePdf_2D::RooNCSplinePdf_2D() :
-RooNCSplinePdf_1D(),
+RooNCSplinePdfCore(),
+theYVar("theYVar", "theYVar", this),
 YList("YList", "List of Y coordinates", this),
 npointsY(0)
 {}
@@ -24,32 +26,24 @@ npointsY(0)
 RooNCSplinePdf_2D::RooNCSplinePdf_2D(
   const char* name,
   const char* title,
-  RooAbsReal& inXVar,
-  RooAbsReal& inYVar,
-  const RooArgList& inXList, // X and Y define the grid
-  const RooArgList& inYList,
-  const RooArgList& inFcnList // Z has dimension dim(X)*dim(Y) with Z[i][j] corresponding to X[i], Y[j]
+  RooAbsReal* inXVar,
+  RooAbsReal* inYVar,
+  const RooArgList* inXList,
+  const RooArgList* inYList,
+  std::vector<const RooArgList*>& inFcnList,
+  bool inUseConst
   ) :
-  RooNCSplinePdf_1D(name, title, inXVar, inXList, inFcnList),
-  theYVar("theYVar", "theYVar", this, inYVar),
+  RooNCSplinePdfCore(name, title, inXVar, inXList, inUseConst),
+  theYVar("theYVar", "theYVar", this, *inYVar),
   YList("YList", "List of Y coordinates", this)
 {
-  TIterator* coefIter = inYList.createIterator();
-  RooAbsArg* coef;
-  while ((coef = (RooAbsArg*)coefIter->Next())){
-    if (!dynamic_cast<RooAbsReal*>(coef)){
-      coutE(InputArguments) << "RooNCSplinePdf_2D ERROR::RooNCSplinePdf_2D(" << GetName() << ") Y variable " << coef->GetName() << " is not of type RooAbsReal" << endl;
-      assert(0);
-    }
-    YList.add(*coef);
-  }
-  delete coefIter;
-
+  setProxyList(inYList, YList);
   npointsY = YList.getSize();
 
-  if (npointsY<=1){
-    coutE(InputArguments) << "RooNCSplinePdf_2D ERROR::RooNCSplinePdf_2D(" << GetName() << ") npointsY " << npointsY << "<=1 cannot have a spline." << endl;
-    assert(0);
+  for (unsigned int ifcn=0; ifcn<inFcnList.size(); ifcn++){
+    const RooArgList* flist = inFcnList.at(ifcn);
+    FcnList.emplace_back(Form("FcnList%i", (int)ifcn), Form("List of function %i coordinates", (int)ifcn), this);
+    setProxyList(flist, FcnList.at(ifcn));
   }
 }
 
@@ -57,11 +51,13 @@ RooNCSplinePdf_2D::RooNCSplinePdf_2D(
   const RooNCSplinePdf_2D& other,
   const char* name
   ) :
-  RooNCSplinePdf_1D(other, name),
+  RooNCSplinePdfCore(other, name),
   theYVar("theYVar", this, other.theYVar),
   YList("YList", this, other.YList),
   npointsY(other.npointsY)
-{}
+{
+  for (unsigned int ifcn=0; ifcn<other.FcnList.size(); ifcn++){ FcnList.emplace_back(Form("FcnList%i", (int)ifcn), this, other.FcnList.at(ifcn)); }
+}
 
 
 Double_t RooNCSplinePdf_2D::interpolateFcn(Int_t code, const char* rangeName)const{
@@ -251,7 +247,7 @@ Double_t RooNCSplinePdf_2D::getTVar(const vector<Double_t>& kappas, const Double
 
 vector<vector<Double_t>> RooNCSplinePdf_2D::getCoefficientsPerY(const std::vector<Double_t>& kappaX, const TMatrixD& xAinv, const Int_t& ybin, const Int_t xbin)const{
   vector<Double_t> fcnList;
-  for (int bin=0; bin<npointsX; bin++){ fcnList.push_back((dynamic_cast<RooAbsReal*>(FcnList.at(npointsY*bin+ybin)))->getVal()); }
+  for (int bin=0; bin<npointsX; bin++){ fcnList.push_back((dynamic_cast<RooAbsReal*>(FcnList.at(ybin).at(bin)))->getVal()); }
   vector<vector<Double_t>> coefs = getCoefficientsAlongDirection(kappaX, xAinv, fcnList, xbin);
   //for (unsigned int bin=0; bin<fcnList.size(); bin++) cout << "RooNCSplinePdf_2D::getCoefficientsPerY: fcnList[" << bin << " | ybin = " << ybin << ", xbin = " << xbin << "] = " << fcnList[bin] << endl;
   //for (unsigned int bin=0; bin<coefs.size(); bin++){

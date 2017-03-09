@@ -1,14 +1,10 @@
 #include "RooNCSplinePdfCore.h" 
 #include <cmath>
 #include "Riostream.h" 
-#include "RooAbsReal.h" 
-#include "RooAbsCategory.h" 
-#include "TH3F.h"
-#include "TAxis.h"
 #include "TMath.h"
 #include "TMatrixD.h"
 #include "TVectorD.h"
-#include "RooDataHist.h"
+#include "TIterator.h"
 
 using namespace TMath;
 using namespace RooFit;
@@ -16,7 +12,12 @@ using namespace std;
 
 
 RooNCSplinePdfCore::RooNCSplinePdfCore() :
-RooAbsPdf()
+RooAbsPdf(),
+verbosity(RooNCSplinePdfCore::kSilent),
+useConst(false),
+theXVar("theXVar", "theXVar", this),
+XList("XList", "List of X coordinates", this),
+npointsX(0)
 {}
 
 RooNCSplinePdfCore::RooNCSplinePdfCore(
@@ -24,17 +25,69 @@ RooNCSplinePdfCore::RooNCSplinePdfCore(
   const char* title
   ) :
   RooAbsPdf(name, title),
-  verbosity(RooNCSplinePdfCore::kSilent)
+  verbosity(RooNCSplinePdfCore::kSilent),
+  useConst(false),
+  theXVar("theXVar", "theXVar", this),
+  XList("XList", "List of X coordinates", this),
+  npointsX(0)
 {}
+
+RooNCSplinePdfCore::RooNCSplinePdfCore(
+  const char* name,
+  const char* title,
+  RooAbsReal* inXVar,
+  const RooArgList* inXList,
+  bool inUseConst
+  ) :
+  RooAbsPdf(name, title),
+  verbosity(RooNCSplinePdfCore::kSilent),
+  useConst(inUseConst),
+  theXVar("theXVar", "theXVar", this, *inXVar),
+  XList("XList", "List of X coordinates", this)
+{
+  setProxyList(inXList, XList);
+  npointsX = XList.getSize();
+}
 
 RooNCSplinePdfCore::RooNCSplinePdfCore(
   const RooNCSplinePdfCore& other,
   const char* name
   ) :
   RooAbsPdf(other, name),
-  verbosity(other.verbosity)
+  verbosity(other.verbosity),
+  useConst(other.useConst),
+  theXVar("theXVar", this, other.theXVar),
+  XList("XList", this, other.XList),
+  npointsX(other.npointsX)
 {}
 
+void RooNCSplinePdfCore::setVerbosity(VerbosityLevel flag){ verbosity=flag; }
+
+void RooNCSplinePdfCore::setProxyList(const RooArgList* list, RooListProxy& proxy){
+  if (list==(const RooArgList*)0){
+    coutE(InputArguments) << "RooNCSplinePdfCore::setProxyList: RooNCSplinePdfCore(" << GetName() << ") variable list does not exist." << endl;
+    assert(0);
+  }
+
+  TIterator* coefIter = list->createIterator();
+  RooAbsArg* coef;
+  while ((coef = (RooAbsArg*)coefIter->Next())){
+    if (!useConst){
+      if (!dynamic_cast<RooAbsReal*>(coef)){
+        coutE(InputArguments) << "RooNCSplinePdfCore::setProxyList: RooNCSplinePdfCore(" << GetName() << ") variable " << coef->GetName() << " is not of type RooAbsReal" << endl;
+        assert(0);
+      }
+    }
+    else{
+      if (!dynamic_cast<RooConstVar*>(coef)){
+        coutE(InputArguments) << "RooNCSplinePdfCore::setProxyList: RooNCSplinePdfCore(" << GetName() << ") variable " << coef->GetName() << " is not of type RooConstVar" << endl;
+        assert(0);
+      }
+    }
+    proxy.add(*coef);
+  }
+  delete coefIter;
+}
 
 void RooNCSplinePdfCore::getBArray(const std::vector<Double_t>& kappas, const vector<Double_t>& fcnList, std::vector<Double_t>& BArray)const{
   BArray.clear();
@@ -128,8 +181,6 @@ Double_t RooNCSplinePdfCore::evalSplineSegment(const std::vector<Double_t>& coef
   }
   return res;
 }
-
-void RooNCSplinePdfCore::setVerbosity(VerbosityLevel flag){ verbosity=flag; }
 
 
 ClassImp(RooNCSplinePdfCore)

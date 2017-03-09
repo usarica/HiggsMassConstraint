@@ -23,31 +23,12 @@ RooNCSplinePdf_1D()
 RooNCSplinePdf_1D_fast::RooNCSplinePdf_1D_fast(
 const char* name,
 const char* title,
-RooAbsReal& inXVar,
-const RooArgList& inXList,
-const RooArgList& inFcnList
+RooAbsReal* inXVar,
+const RooArgList* inXList,
+const RooArgList* inFcnList
 ) :
-RooNCSplinePdf_1D(name, title, inXVar, inXList, inFcnList)
+RooNCSplinePdf_1D(name, title, inXVar, inXList, inFcnList, true)
 {
-  TIterator* coefIter = inXList.createIterator();
-  RooAbsArg* coef;
-  while ((coef = (RooAbsArg*)coefIter->Next())){
-    if (!dynamic_cast<RooConstVar*>(coef)){
-      coutE(InputArguments) << "RooNCSplinePdf_1D_fast ERROR::RooNCSplinePdf_1D_fast(" << GetName() << ") X variable " << coef->GetName() << " is not of type RooConstVar" << endl;
-      assert(0);
-    }
-  }
-  delete coefIter;
-
-  coefIter = inFcnList.createIterator();
-  while ((coef = (RooAbsArg*)coefIter->Next())){
-    if (!dynamic_cast<RooConstVar*>(coef)){
-      coutE(InputArguments) << "RooNCSplinePdf_1D_fast ERROR::RooNCSplinePdf_1D_fast(" << GetName() << ") function variable " << coef->GetName() << " is not of type RooConstVar" << endl;
-      assert(0);
-    }
-  }
-  delete coefIter;
-
   if (npointsX>1){
     int npoints;
 

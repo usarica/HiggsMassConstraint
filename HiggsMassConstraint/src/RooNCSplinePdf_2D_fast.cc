@@ -22,53 +22,13 @@ RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast() : RooNCSplinePdf_2D()
 RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast(
   const char* name,
   const char* title,
-  RooAbsReal& inXVar,
-  RooAbsReal& inYVar,
-  const RooArgList& inXList, // X and Y define the grid
-  const RooArgList& inYList,
-  const RooArgList& inFcnList // Z has dimension dim(X)*dim(Y) with Z[i][j] corresponding to X[i], Y[j]
-  ) : RooNCSplinePdf_2D(name, title, inXVar, inYVar, inXList, inYList, inFcnList)
+  RooAbsReal* inXVar,
+  RooAbsReal* inYVar,
+  const RooArgList* inXList,
+  const RooArgList* inYList,
+  std::vector<const RooArgList*>& inFcnList
+  ) : RooNCSplinePdf_2D(name, title, inXVar, inYVar, inXList, inYList, inFcnList, true)
 {
-  TIterator* coefIter = inXList.createIterator();
-  RooAbsArg* coef;
-  while ((coef = (RooAbsArg*)coefIter->Next())){
-    if (!dynamic_cast<RooConstVar*>(coef)){
-      coutE(InputArguments) << "RooNCSplinePdf_2D_fast ERROR::RooNCSplinePdf_2D_fast(" << GetName() << ") X variable " << coef->GetName() << " is not of type RooConstVar" << endl;
-      assert(0);
-    }
-  }
-  delete coefIter;
-
-  coefIter = inYList.createIterator();
-  while ((coef = (RooAbsArg*)coefIter->Next())){
-    if (!dynamic_cast<RooConstVar*>(coef)){
-      coutE(InputArguments) << "RooNCSplinePdf_2D_fast ERROR::RooNCSplinePdf_2D_fast(" << GetName() << ") Y variable " << coef->GetName() << " is not of type RooConstVar" << endl;
-      assert(0);
-    }
-  }
-  delete coefIter;
-
-  coefIter = inFcnList.createIterator();
-  while ((coef = (RooAbsArg*)coefIter->Next())){
-    if (!dynamic_cast<RooConstVar*>(coef)){
-      coutE(InputArguments) << "RooNCSplinePdf_2D_fast ERROR::RooNCSplinePdf_2D_fast(" << GetName() << ") function variable " << coef->GetName() << " is not of type RooConstVar" << endl;
-      assert(0);
-    }
-  }
-  delete coefIter;
-
-  /*
-  cout << "RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast: xpoints[ " << XList.getSize() << "] =";
-  for (int ip=0; ip<XList.getSize(); ip++) cout << " " << ((RooConstVar*)XList.at(ip))->getVal();
-  cout << endl;
-  cout << "RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast: ypoints[ " << YList.getSize() << "] =";
-  for (int ip=0; ip<YList.getSize(); ip++) cout << " " << ((RooConstVar*)YList.at(ip))->getVal();
-  cout << endl;
-  cout << "RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast: fcnpoints[ " << FcnList.getSize() << "] =";
-  for (int ip=0; ip<FcnList.getSize(); ip++) cout << " " << ((RooConstVar*)FcnList.at(ip))->getVal();
-  cout << endl;
-  */
-
   if (npointsX>1 && npointsY>1){
     // Prepare A and kappa arrays for x and y coordinates
     int npoints;

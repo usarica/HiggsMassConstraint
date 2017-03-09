@@ -5,13 +5,7 @@
 #include "RooAbsPdf.h"
 #include "RooRealProxy.h"
 #include "RooRealVar.h"
-#include "RooCategoryProxy.h"
 #include "RooAbsReal.h"
-#include "RooAbsCategory.h"
-#include "TH3F.h"
-#include "TH1.h"
-#include "RooDataHist.h"
-#include "RooHistFunc.h"
 #include "RooNCSplinePdf_1D.h"
 
 
@@ -25,9 +19,9 @@ public:
   RooNCSplinePdf_1D_fast(
     const char* name,
     const char* title,
-    RooAbsReal& inXVar,
-    const RooArgList& inXList,
-    const RooArgList& inFcnList
+    RooAbsReal* inXVar,
+    const RooArgList* inXList,
+    const RooArgList* inFcnList
     );
   RooNCSplinePdf_1D_fast(const RooNCSplinePdf_1D_fast& other, const char* name=0);
 	virtual TObject* clone(const char* newname)const { return new RooNCSplinePdf_1D_fast(*this, newname); }

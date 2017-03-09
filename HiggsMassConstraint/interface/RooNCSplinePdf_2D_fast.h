@@ -5,13 +5,7 @@
 #include "RooAbsPdf.h"
 #include "RooRealProxy.h"
 #include "RooRealVar.h"
-#include "RooCategoryProxy.h"
 #include "RooAbsReal.h"
-#include "RooAbsCategory.h"
-#include "TH3F.h"
-#include "TH1.h"
-#include "RooDataHist.h"
-#include "RooHistFunc.h"
 #include "RooNCSplinePdf_2D.h"
 
 class RooNCSplinePdf_2D_fast : public RooNCSplinePdf_2D{
@@ -25,11 +19,11 @@ public:
   RooNCSplinePdf_2D_fast(
     const char* name,
     const char* title,
-    RooAbsReal& inXVar,
-    RooAbsReal& inYVar,
-    const RooArgList& inXList, // X and Y define the grid
-    const RooArgList& inYList,
-    const RooArgList& inFcnList // Z has dimension dim(X)*dim(Y) with Z[i][j] corresponding to X[i], Y[j]
+    RooAbsReal* inXVar,
+    RooAbsReal* inYVar,
+    const RooArgList* inXList,
+    const RooArgList* inYList,
+    std::vector<const RooArgList*>& inFcnList
     );
   RooNCSplinePdf_2D_fast(const RooNCSplinePdf_2D_fast& other, const char* name=0);
 	virtual TObject* clone(const char* newname)const { return new RooNCSplinePdf_2D_fast(*this, newname); }
