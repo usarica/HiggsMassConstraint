@@ -37,7 +37,7 @@ const double m1Range[2]={ 40., 120. };
 const double m2Range[2]={ 12., 120. };
 const Int_t intCodeStart = RooSpin::prime_h1*RooSpin::prime_h2*RooSpin::prime_Phi*RooSpin::prime_hs*RooSpin::prime_Phi1;
 const bool recordPDFHisto=false;
-const bool doWS=false;
+const bool doWS=true;
 
 TString savePlot(TString name, TCanvas* c);
 void splitOption(const string rawoption, string& wish, string& value, char delimiter);
