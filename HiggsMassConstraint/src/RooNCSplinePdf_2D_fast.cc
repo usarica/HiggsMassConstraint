@@ -16,25 +16,31 @@ using namespace RooFit;
 using namespace std;
 
 
-RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast() : RooNCSplinePdf_2D()
+RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast() :
+RooNCSplinePdfCore(),
+theYVar("theYVar", "theYVar", this)
 {}
 
 RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast(
   const char* name,
   const char* title,
-  RooAbsReal* inXVar,
-  RooAbsReal* inYVar,
-  const RooArgList* inXList,
-  const RooArgList* inYList,
-  std::vector<const RooArgList*>& inFcnList
-  ) : RooNCSplinePdf_2D(name, title, inXVar, inYVar, inXList, inYList, inFcnList, true)
+  RooAbsReal& inXVar,
+  RooAbsReal& inYVar,
+  std::vector<T>& inXList,
+  std::vector<T>& inYList,
+  std::vector<std::vector<T>>& inFcnList
+  ) :
+  RooNCSplinePdfCore(name, title, inXVar, inXList),
+  theYVar("theYVar", "theYVar", this, inYVar),
+  YList(inYList),
+  FcnList(inFcnList)
 {
-  if (npointsX>1 && npointsY>1){
+  if (npointsX()>1 && npointsY()>1){
     // Prepare A and kappa arrays for x and y coordinates
     int npoints;
-    Double_t det;
+    RooNCSplinePdfCore::T det;
 
-    vector<vector<Double_t>> xA; getKappa(kappaX, 0); getAArray(kappaX, xA);
+    vector<vector<RooNCSplinePdfCore::T>> xA; getKappa(kappaX, 0); getAArray(kappaX, xA);
     npoints=kappaX.size();
     TMatrixD xAtrans(npoints, npoints);
     for (int i=0; i<npoints; i++){ for (int j=0; j<npoints; j++){ xAtrans[i][j]=xA.at(i).at(j); } }
@@ -45,7 +51,7 @@ RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast(
       assert(0);
     }
 
-    vector<vector<Double_t>> yA; getKappa(kappaY, 1); getAArray(kappaY, yA);
+    vector<vector<RooNCSplinePdfCore::T>> yA; getKappa(kappaY, 1); getAArray(kappaY, yA);
     npoints=kappaY.size();
     TMatrixD yAtrans(npoints, npoints);
     for (int i=0; i<npoints; i++){ for (int j=0; j<npoints; j++){ yAtrans[i][j]=yA.at(i).at(j); } }
@@ -57,18 +63,18 @@ RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast(
     }
 
     // Get the grid of coefficients
-    vector<vector<vector<Double_t>>> coefsAlongY; // [Ax(y),Bx(y),Cx(y),Dx(y)][xbin][ybin]
+    vector<vector<vector<RooNCSplinePdfCore::T>>> coefsAlongY; // [Ax(y),Bx(y),Cx(y),Dx(y)][xbin][ybin]
     int npoldim=0;
     int nxbins=0;
-    for (Int_t j=0; j<npointsY; j++){
-      vector<vector<Double_t>> xcoefsAtYj = getCoefficientsPerY(kappaX, xAinv, j, -1); // [ix][Ax,Bx,Cx,Dx] at each y_j
+    for (unsigned int j=0; j<npointsY(); j++){
+      vector<vector<RooNCSplinePdfCore::T>> xcoefsAtYj = getCoefficientsPerY(kappaX, xAinv, j, -1); // [ix][Ax,Bx,Cx,Dx] at each y_j
       if (j==0){
         nxbins=xcoefsAtYj.size();
         npoldim=xcoefsAtYj.at(0).size();
         for (int ipow=0; ipow<npoldim; ipow++){
-          vector<vector<Double_t>> dum_xycoefarray;
+          vector<vector<RooNCSplinePdfCore::T>> dum_xycoefarray;
           for (int ix=0; ix<nxbins; ix++){
-            vector<Double_t> dum_ycoefarray;
+            vector<RooNCSplinePdfCore::T> dum_ycoefarray;
             dum_xycoefarray.push_back(dum_ycoefarray);
           }
           coefsAlongY.push_back(dum_xycoefarray);
@@ -85,9 +91,9 @@ RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast(
 
     for (int ix=0; ix<nxbins; ix++){
       // Get the x coefficients interpolated across y
-      vector<vector<vector<Double_t>>> xCoefs;
+      vector<vector<vector<RooNCSplinePdfCore::T>>> xCoefs;
       for (int ic=0; ic<npoldim; ic++){
-        vector<vector<Double_t>> yCoefs = getCoefficientsAlongDirection(kappaY, yAinv, coefsAlongY.at(ic).at(ix), -1); // [iy][A,B,C,D]
+        vector<vector<RooNCSplinePdfCore::T>> yCoefs = getCoefficientsAlongDirection(kappaY, yAinv, coefsAlongY.at(ic).at(ix), -1); // [iy][A,B,C,D]
         xCoefs.push_back(yCoefs);
       }
       coefficients.push_back(xCoefs);
@@ -100,34 +106,24 @@ RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast(
   const RooNCSplinePdf_2D_fast& other,
   const char* name
   ) :
-  RooNCSplinePdf_2D(other, name),
+  RooNCSplinePdfCore(other, name),
+  theYVar("theYVar", this, other.theYVar),
+  YList(other.YList),
+  FcnList(other.FcnList),
   kappaX(other.kappaX),
-  kappaY(other.kappaY)
-{
-  for (unsigned int i1=0; i1<other.coefficients.size(); i1++){
-    vector<vector<vector<Double_t>>> coefarray;
-    for (unsigned int i2=0; i2<other.coefficients.at(i1).size(); i2++){
-      vector<vector<Double_t>> coefs;
-      for (unsigned int i3=0; i3<other.coefficients.at(i1).at(i2).size(); i3++){
-        vector<Double_t> coef;
-        for (unsigned int i4=0; i4<other.coefficients.at(i1).at(i2).at(i3).size(); i4++) coef.push_back(other.coefficients.at(i1).at(i2).at(i3).at(i4));
-        coefs.push_back(coef);
-      }
-      coefarray.push_back(coefs);
-    }
-    coefficients.push_back(coefarray);
-  }
-}
+  kappaY(other.kappaY),
+  coefficients(other.coefficients)
+{}
 
 
-Double_t RooNCSplinePdf_2D_fast::interpolateFcn(Int_t code, const char* rangeName)const{
-  Double_t res=0;
+RooNCSplinePdfCore::T RooNCSplinePdf_2D_fast::interpolateFcn(Int_t code, const char* rangeName)const{
+  RooNCSplinePdfCore::T res=0;
 
   if (verbosity==RooNCSplinePdfCore::kVerbose){ cout << "RooNCSplinePdf_2D_fast(" << GetName() << ")::interpolateFcn begin with code: " << code << endl; }
 
   // Get bins
   Int_t xbin=-1, xbinmin=-1, xbinmax=-1, ybin=-1, ybinmin=-1, ybinmax=-1;
-  Double_t tx=0, txmin=0, txmax=0, ty=0, tymin=0, tymax=0;
+  RooNCSplinePdfCore::T tx=0, txmin=0, txmax=0, ty=0, tymin=0, tymax=0;
   if (code==0 || code%2!=0){ // Case to just compute the value at x
     xbin = getWhichBin(theXVar, 0);
     tx = getTVar(kappaX, theXVar, xbin, 0);
@@ -156,7 +152,7 @@ Double_t RooNCSplinePdf_2D_fast::interpolateFcn(Int_t code, const char* rangeNam
       (xbinmin>=0 && xbinmax>=xbinmin && !(xbinmin<=ix && ix<=xbinmax))
       ) continue;
 
-    Double_t txlow=0, txhigh=1;
+    RooNCSplinePdfCore::T txlow=0, txhigh=1;
     if (code>0 && code%2==0){
       if (ix==xbinmin) txlow=txmin;
       if (ix==xbinmax) txhigh=txmax;
@@ -169,13 +165,13 @@ Double_t RooNCSplinePdf_2D_fast::interpolateFcn(Int_t code, const char* rangeNam
     }
 
     // Get the x coefficients interpolated across y
-    vector<Double_t> xCoefs;
+    vector<RooNCSplinePdfCore::T> xCoefs;
     for (int ic=0; ic<(int)coefficients.at(ix).size(); ic++){
-      const vector<vector<Double_t>>& yCoefs = coefficients.at(ix).at(ic);
+      const vector<vector<RooNCSplinePdfCore::T>>& yCoefs = coefficients.at(ix).at(ic);
 
       if (verbosity==RooNCSplinePdfCore::kVerbose) cout << "\tCoefficient " << ic << ":\n";
 
-      Double_t theCoef=0;
+      RooNCSplinePdfCore::T theCoef=0;
       for (int iy=0; iy<(int)yCoefs.size(); iy++){
         if (
           (ybin>=0 && iy!=ybin)
@@ -183,7 +179,7 @@ Double_t RooNCSplinePdf_2D_fast::interpolateFcn(Int_t code, const char* rangeNam
           (ybinmin>=0 && ybinmax>=ybinmin && !(ybinmin<=iy && iy<=ybinmax))
           ) continue;
 
-        Double_t tylow=0, tyhigh=1;
+        RooNCSplinePdfCore::T tylow=0, tyhigh=1;
         if (code>0 && code%3==0){
           if (iy==ybinmin) tylow=tymin;
           if (iy==ybinmax) tyhigh=tymax;
@@ -197,9 +193,9 @@ Double_t RooNCSplinePdf_2D_fast::interpolateFcn(Int_t code, const char* rangeNam
 
         theCoef += evalSplineSegment(yCoefs.at(iy), kappaY.at(iy), tyhigh, tylow, (code>0 && code%3==0));
       }
-      
+
       //if (code==0) cout << "\tCoefficient is " << theCoef << endl;
-      
+
       xCoefs.push_back(theCoef);
     }
 
@@ -210,6 +206,74 @@ Double_t RooNCSplinePdf_2D_fast::interpolateFcn(Int_t code, const char* rangeNam
   return res;
 }
 
+
+void RooNCSplinePdf_2D_fast::getKappa(vector<RooNCSplinePdfCore::T>& kappas, const Int_t whichDirection)const{
+  kappas.clear();
+  RooNCSplinePdfCore::T kappa=1;
+
+  Int_t npoints;
+  vector<RooNCSplinePdfCore::T> const* coord;
+  if (whichDirection==0){
+    npoints=npointsX();
+    coord=&XList;
+  }
+  else{
+    npoints=npointsY();
+    coord=&YList;
+  }
+
+  for (Int_t j=0; j<npoints-1; j++){
+    RooNCSplinePdfCore::T val_j = coord->at(j);
+    RooNCSplinePdfCore::T val_jpo = coord->at(j+1);
+    kappa = 1./(val_jpo-val_j);
+    kappas.push_back(kappa);
+  }
+  kappas.push_back(kappa); // Push the same kappa_(N-1)=kappa_(N-2) at the end point
+}
+Int_t RooNCSplinePdf_2D_fast::getWhichBin(const RooNCSplinePdfCore::T& val, const Int_t whichDirection)const{
+  Int_t bin=-1;
+  RooNCSplinePdfCore::T valj, valjpo;
+  Int_t npoints;
+  vector<RooNCSplinePdfCore::T> const* coord;
+  if (whichDirection==0){
+    coord=&XList;
+    npoints=npointsX();
+  }
+  else{
+    coord=&YList;
+    npoints=npointsY();
+  }
+
+  if (npoints<=1) bin=0;
+  else{
+    valjpo = coord->at(0);
+    for (Int_t j=0; j<npoints-1; j++){
+      valj = coord->at(j);
+      valjpo = coord->at(j+1);
+      if (val<valjpo && val>=valj){ bin=j; break; }
+    }
+    if (bin==-1 && val>=valjpo) bin=npoints-2;
+    else if (bin==-1) bin=0;
+  }
+
+  return bin;
+}
+RooNCSplinePdfCore::T RooNCSplinePdf_2D_fast::getTVar(const vector<RooNCSplinePdfCore::T>& kappas, const RooNCSplinePdfCore::T& val, const Int_t& bin, const Int_t whichDirection)const{
+  RooNCSplinePdfCore::T K;
+  K=kappas.at(bin);
+  vector<RooNCSplinePdfCore::T> const* coord;
+  if (whichDirection==0) coord=&XList;
+  else coord=&YList;
+  return (val-coord->at(bin))*K;
+}
+
+vector<vector<RooNCSplinePdfCore::T>> RooNCSplinePdf_2D_fast::getCoefficientsPerY(const std::vector<RooNCSplinePdfCore::T>& kappaX, const TMatrixD& xAinv, const Int_t& ybin, const Int_t xbin)const{
+  vector<RooNCSplinePdfCore::T> fcnList;
+  for (unsigned int bin=0; bin<npointsX(); bin++){ fcnList.push_back(FcnList.at(ybin).at(bin)); }
+  vector<vector<RooNCSplinePdfCore::T>> coefs = getCoefficientsAlongDirection(kappaX, xAinv, fcnList, xbin);
+  return coefs;
+}
+
 Double_t RooNCSplinePdf_2D_fast::evaluate() const{
   Double_t value = interpolateFcn(0);
   if (value<=0.){
@@ -218,6 +282,17 @@ Double_t RooNCSplinePdf_2D_fast::evaluate() const{
   }
   if (verbosity==RooNCSplinePdfCore::kVerbose){ cout << "RooNCSplinePdf_2D_fast(" << GetName() << ")::evaluate = " << value << " at (x, y) = (" << theXVar << ", " << theYVar << ")" << endl; }
   return value;
+}
+Int_t RooNCSplinePdf_2D_fast::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* /*rangeName*/) const{
+  Int_t code=1;
+  if (dynamic_cast<RooRealVar*>(theXVar.absArg())!=0){
+    if (matchArgs(allVars, analVars, theXVar)) code*=2;
+  }
+  if (dynamic_cast<RooRealVar*>(theYVar.absArg())!=0){
+    if (matchArgs(allVars, analVars, theYVar)) code*=3;
+  }
+  if (code==1) code=0;
+  return code;
 }
 Double_t RooNCSplinePdf_2D_fast::analyticalIntegral(Int_t code, const char* rangeName) const{
   Double_t value = interpolateFcn(code, rangeName);

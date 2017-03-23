@@ -259,7 +259,7 @@ void getProjection_single_HVV(string gSet, string decaytype, string strprojvar){
         tgint->SetMarkerSize(0.8);
 
         if (projvar==m1 || projvar==m2){
-          NCSplinePdfFactory* spFactory = new NCSplinePdfFactory(projvar, Form("mH%.0f", mPOLE));
+          NCSplinePdfFactory* spFactory = new NCSplinePdfFactory(*projvar, Form("mH%.0f", mPOLE));
           spFactory->setGraph(tgint);
           RooNCSplinePdf_1D_fast* spPDF = spFactory->getPDF();
 

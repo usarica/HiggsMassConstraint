@@ -17,35 +17,34 @@ using namespace std;
 
 
 RooNCSplinePdf_1D_fast::RooNCSplinePdf_1D_fast() :
-RooNCSplinePdf_1D()
+RooNCSplinePdfCore()
 {}
 
 RooNCSplinePdf_1D_fast::RooNCSplinePdf_1D_fast(
 const char* name,
 const char* title,
-RooAbsReal* inXVar,
-const RooArgList* inXList,
-const RooArgList* inFcnList
+RooAbsReal& inXVar,
+std::vector<T>& inXList,
+std::vector<T>& inFcnList
 ) :
-RooNCSplinePdf_1D(name, title, inXVar, inXList, inFcnList, true)
+RooNCSplinePdfCore(name, title, inXVar, inXList),
+FcnList(inFcnList)
 {
-  if (npointsX>1){
+  if (npointsX()>1){
     int npoints;
 
-    vector<vector<Double_t>> xA; getKappa(kappaX, 0); getAArray(kappaX, xA);
+    vector<vector<RooNCSplinePdfCore::T>> xA; getKappa(kappaX, 0); getAArray(kappaX, xA);
     npoints=kappaX.size();
     TMatrixD xAtrans(npoints, npoints);
     for (int i=0; i<npoints; i++){ for (int j=0; j<npoints; j++){ xAtrans[i][j]=xA.at(i).at(j); } }
-    Double_t det=0;
+    RooNCSplinePdfCore::T det=0;
     TMatrixD xAinv = xAtrans.Invert(&det);
     if (det==0.){
       coutE(InputArguments) << "RooNCSplinePdf_1D::interpolateFcn: Matrix xA could not be inverted. Something is wrong with the x coordinates of points!" << endl;
       assert(0);
     }
 
-    vector<Double_t> fcnList;
-    for (int bin=0; bin<npointsX; bin++) fcnList.push_back((dynamic_cast<RooAbsReal*>(FcnList.at(bin)))->getVal());
-    coefficients = getCoefficientsAlongDirection(kappaX, xAinv, fcnList, -1);
+    coefficients = getCoefficientsAlongDirection(kappaX, xAinv, FcnList, -1);
   }
   else assert(0);
 }
@@ -53,22 +52,19 @@ RooNCSplinePdf_1D(name, title, inXVar, inXList, inFcnList, true)
 RooNCSplinePdf_1D_fast::RooNCSplinePdf_1D_fast(
   const RooNCSplinePdf_1D_fast& other,
   const char* name
-  ) : RooNCSplinePdf_1D(other,name),
-  kappaX(other.kappaX)
-{
-  for (unsigned int ibin=0; ibin<other.coefficients.size(); ibin++){
-    vector<Double_t> coef;
-    for (unsigned int ic=0; ic<other.coefficients.at(ibin).size(); ic++) coef.push_back(other.coefficients.at(ibin).at(ic));
-    coefficients.push_back(coef);
-  }
-}
+  ) :
+  RooNCSplinePdfCore(other, name),
+  FcnList(other.FcnList),
+  kappaX(other.kappaX),
+  coefficients(other.coefficients)
+{}
 
-Double_t RooNCSplinePdf_1D_fast::interpolateFcn(Int_t code, const char* rangeName)const{
-  Double_t res = 0;
+RooNCSplinePdfCore::T RooNCSplinePdf_1D_fast::interpolateFcn(Int_t code, const char* rangeName)const{
+  RooNCSplinePdfCore::T res = 0;
 
   // Get bins
   Int_t xbin=-1, xbinmin=-1, xbinmax=-1;
-  Double_t tx=0, txmin=0, txmax=0;
+  RooNCSplinePdfCore::T tx=0, txmin=0, txmax=0;
   if (code==0 || code%2!=0){ // Case to just compute the value at x
     xbin = getWhichBin(theXVar, 0);
     tx = getTVar(kappaX, theXVar, xbin, 0);
@@ -88,7 +84,7 @@ Double_t RooNCSplinePdf_1D_fast::interpolateFcn(Int_t code, const char* rangeNam
       (xbinmin>=0 && xbinmax>=xbinmin && !(xbinmin<=ix && ix<=xbinmax))
       ) continue;
 
-    Double_t txlow=0, txhigh=1;
+    RooNCSplinePdfCore::T txlow=0, txhigh=1;
     if (code>0 && code%2==0){
       if (ix==xbinmin) txlow=txmin;
       if (ix==xbinmax) txhigh=txmax;
@@ -102,12 +98,63 @@ Double_t RooNCSplinePdf_1D_fast::interpolateFcn(Int_t code, const char* rangeNam
   return res;
 }
 
+void RooNCSplinePdf_1D_fast::getKappa(vector<RooNCSplinePdfCore::T>& kappas, const Int_t /*whichDirection*/)const{
+  kappas.clear();
+  RooNCSplinePdfCore::T kappa=1;
+
+  Int_t npoints;
+  vector<RooNCSplinePdfCore::T> const* coord;
+  npoints=npointsX();
+  coord=&XList;
+
+  for (Int_t j=0; j<npoints-1; j++){
+    RooNCSplinePdfCore::T val_j = coord->at(j);
+    RooNCSplinePdfCore::T val_jpo = coord->at(j+1);
+    kappa = 1./(val_jpo-val_j);
+    kappas.push_back(kappa);
+  }
+  kappas.push_back(kappa); // Push the same kappa_(N-1)=kappa_(N-2) at the end point
+}
+Int_t RooNCSplinePdf_1D_fast::getWhichBin(const RooNCSplinePdfCore::T& val, const Int_t /*whichDirection*/)const{
+  Int_t bin=-1;
+  RooNCSplinePdfCore::T valj, valjpo;
+  Int_t npoints;
+  vector<RooNCSplinePdfCore::T> const* coord;
+  coord=&XList;
+  npoints=npointsX();
+
+  if (npoints<=1) bin=0;
+  else{
+    valjpo = coord->at(0);
+    for (Int_t j=0; j<npoints-1; j++){
+      valj = coord->at(j);
+      valjpo = coord->at(j+1);
+      if (val<valjpo && val>=valj){ bin=j; break; }
+    }
+    if (bin==-1 && val>=valjpo) bin=npoints-2;
+    else if (bin==-1) bin=0;
+  }
+
+  return bin;
+}
+RooNCSplinePdfCore::T RooNCSplinePdf_1D_fast::getTVar(const vector<RooNCSplinePdfCore::T>& kappas, const RooNCSplinePdfCore::T& val, const Int_t& bin, const Int_t /*whichDirection*/)const{
+  RooNCSplinePdfCore::T K;
+  K=kappas.at(bin);
+  return (val-XList.at(bin))*K;
+}
+
 Double_t RooNCSplinePdf_1D_fast::evaluate() const{
   Double_t value = interpolateFcn(0);
   if (value<=0.) return 1e-15;
   return value;
 }
-
+Int_t RooNCSplinePdf_1D_fast::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* /*rangeName*/) const{
+  Int_t code=0;
+  if (dynamic_cast<RooRealVar*>(theXVar.absArg())!=0){
+    if (matchArgs(allVars, analVars, theXVar)) code=2;
+  }
+  return code;
+}
 Double_t RooNCSplinePdf_1D_fast::analyticalIntegral(Int_t code, const char* rangeName) const{
   Double_t value = interpolateFcn(code, rangeName);
   if (value<=0.) value = 1e-10;

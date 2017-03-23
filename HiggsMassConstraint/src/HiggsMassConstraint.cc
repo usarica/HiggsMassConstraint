@@ -353,7 +353,7 @@ void HiggsMassConstraint::constructSplinePDF(){
   }
 
   // Construct 2D spline factory and its PDF
-  spline2DFactory = new NCSplinePdfFactory_2D(mManip[2], mManip[0], "2D");
+  spline2DFactory = new NCSplinePdfFactory_2D(*(mManip[2]), *(mManip[0]), "2D");
   spline2DFactory->setPoints(points);
   //((RooNCSplinePdfCore*)spline2DFactory->getPDF())->setVerbosity(RooNCSplinePdfCore::kVerbose);
   sqrts=min(massmax, sqrts);
@@ -362,7 +362,7 @@ void HiggsMassConstraint::constructSplinePDF(){
   fin->Close();
 
   // Construct 1D spline factory but not its PDF
-  spline1DFactory = new NCSplinePdfFactory_1D(m[0], "1D");
+  spline1DFactory = new NCSplinePdfFactory_1D(*(m[0]), "1D");
 #else
   cout << "HiggsMassConstraint::constructSplinePDFs: Package path is undefined! Please modify BuildFile.xml." << endl;
   assert(0);

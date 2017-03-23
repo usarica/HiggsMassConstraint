@@ -6,16 +6,23 @@
 #include "RooRealProxy.h"
 #include "RooRealVar.h"
 #include "RooAbsReal.h"
-#include "RooNCSplinePdf_3D.h"
+#include "RooNCSplinePdfCore.h"
 
-class RooNCSplinePdf_3D_fast : public RooNCSplinePdf_3D{
+class RooNCSplinePdf_3D_fast : public RooNCSplinePdfCore{
 protected:
-  std::vector<Double_t> kappaX;
-  std::vector<Double_t> kappaY;
-  std::vector<Double_t> kappaZ;
+  RooRealProxy theYVar;
+  RooRealProxy theZVar;
+  std::vector<T> YList;
+  std::vector<T> ZList;
+
+  std::vector<std::vector<std::vector<T>>> FcnList;
+
+  std::vector<T> kappaX;
+  std::vector<T> kappaY;
+  std::vector<T> kappaZ;
   std::vector<std::vector<
     std::vector<std::vector<
-    std::vector<std::vector<Double_t>>
+    std::vector<std::vector<T>>
     >>
     >> coefficients; // [ix][A_x,B_x,C_x,D_x][iy][A_x_y,B_x_y,C_x_y,D_x_y][iz][A_x_y_z,B_x_y_z,C_x_y_z,D_x_y_z]
 
@@ -24,21 +31,36 @@ public:
   RooNCSplinePdf_3D_fast(
     const char* name,
     const char* title,
-    RooAbsReal* inXVar,
-    RooAbsReal* inYVar,
-    RooAbsReal* inZVar,
-    const RooArgList* inXList,
-    const RooArgList* inYList,
-    const RooArgList* inZList,
-    std::vector<std::vector<const RooArgList*>>& inFcnList
+    RooAbsReal& inXVar,
+    RooAbsReal& inYVar,
+    RooAbsReal& inZVar,
+    std::vector<T>& inXList,
+    std::vector<T>& inYList,
+    std::vector<T>& inZList,
+    std::vector<std::vector<std::vector<T>>>& inFcnList
     );
   RooNCSplinePdf_3D_fast(const RooNCSplinePdf_3D_fast& other, const char* name=0);
 	virtual TObject* clone(const char* newname)const { return new RooNCSplinePdf_3D_fast(*this, newname); }
 	inline virtual ~RooNCSplinePdf_3D_fast(){}
 
 protected:
-  virtual Double_t interpolateFcn(Int_t code, const char* rangeName=0)const;
+  unsigned int npointsY()const{ return YList.size()-1; }
+  unsigned int npointsZ()const{ return ZList.size()-1; }
+
+  virtual Int_t getWhichBin(const T& val, const Int_t whichDirection)const;
+  virtual T getTVar(const std::vector<T>& kappas, const T& val, const Int_t& bin, const Int_t whichDirection)const;
+  virtual void getKappa(std::vector<T>& kappas, const Int_t whichDirection)const;
+
+  virtual std::vector<std::vector<T>> getCoefficientsPerYPerZ(
+    const std::vector<T>& kappaX, const TMatrixD& xAinv,
+    const Int_t& ybin, const Int_t& zbin,
+    const Int_t xbin
+    )const; // xbin can be -1, which means push all of them
+
+  virtual T interpolateFcn(Int_t code, const char* rangeName=0)const;
+
   virtual Double_t evaluate()const;
+  virtual Int_t getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* rangeName=0) const;
   virtual Double_t analyticalIntegral(Int_t code, const char* rangeName=0)const;
 
 private:

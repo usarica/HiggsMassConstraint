@@ -14,10 +14,7 @@ using namespace std;
 RooNCSplinePdfCore::RooNCSplinePdfCore() :
 RooAbsPdf(),
 verbosity(RooNCSplinePdfCore::kSilent),
-useConst(false),
-theXVar("theXVar", "theXVar", this),
-XList("XList", "List of X coordinates", this),
-npointsX(0)
+theXVar("theXVar", "theXVar", this)
 {}
 
 RooNCSplinePdfCore::RooNCSplinePdfCore(
@@ -26,28 +23,20 @@ RooNCSplinePdfCore::RooNCSplinePdfCore(
   ) :
   RooAbsPdf(name, title),
   verbosity(RooNCSplinePdfCore::kSilent),
-  useConst(false),
-  theXVar("theXVar", "theXVar", this),
-  XList("XList", "List of X coordinates", this),
-  npointsX(0)
+  theXVar("theXVar", "theXVar", this)
 {}
 
 RooNCSplinePdfCore::RooNCSplinePdfCore(
   const char* name,
   const char* title,
-  RooAbsReal* inXVar,
-  const RooArgList* inXList,
-  bool inUseConst
+  RooAbsReal& inXVar,
+  std::vector<T>& inXList
   ) :
   RooAbsPdf(name, title),
   verbosity(RooNCSplinePdfCore::kSilent),
-  useConst(inUseConst),
-  theXVar("theXVar", "theXVar", this, *inXVar),
-  XList("XList", "List of X coordinates", this)
-{
-  setProxyList(inXList, XList);
-  npointsX = XList.getSize();
-}
+  theXVar("theXVar", "theXVar", this, inXVar),
+  XList(inXList)
+{}
 
 RooNCSplinePdfCore::RooNCSplinePdfCore(
   const RooNCSplinePdfCore& other,
@@ -55,41 +44,14 @@ RooNCSplinePdfCore::RooNCSplinePdfCore(
   ) :
   RooAbsPdf(other, name),
   verbosity(other.verbosity),
-  useConst(other.useConst),
   theXVar("theXVar", this, other.theXVar),
-  XList("XList", this, other.XList),
-  npointsX(other.npointsX)
+  XList(other.XList)
 {}
 
 void RooNCSplinePdfCore::setVerbosity(VerbosityLevel flag){ verbosity=flag; }
 
-void RooNCSplinePdfCore::setProxyList(const RooArgList* list, RooListProxy& proxy){
-  if (list==(const RooArgList*)0){
-    coutE(InputArguments) << "RooNCSplinePdfCore::setProxyList: RooNCSplinePdfCore(" << GetName() << ") variable list does not exist." << endl;
-    assert(0);
-  }
 
-  TIterator* coefIter = list->createIterator();
-  RooAbsArg* coef;
-  while ((coef = (RooAbsArg*)coefIter->Next())){
-    if (!useConst){
-      if (!dynamic_cast<RooAbsReal*>(coef)){
-        coutE(InputArguments) << "RooNCSplinePdfCore::setProxyList: RooNCSplinePdfCore(" << GetName() << ") variable " << coef->GetName() << " is not of type RooAbsReal" << endl;
-        assert(0);
-      }
-    }
-    else{
-      if (!dynamic_cast<RooConstVar*>(coef)){
-        coutE(InputArguments) << "RooNCSplinePdfCore::setProxyList: RooNCSplinePdfCore(" << GetName() << ") variable " << coef->GetName() << " is not of type RooConstVar" << endl;
-        assert(0);
-      }
-    }
-    proxy.add(*coef);
-  }
-  delete coefIter;
-}
-
-void RooNCSplinePdfCore::getBArray(const std::vector<Double_t>& kappas, const vector<Double_t>& fcnList, std::vector<Double_t>& BArray)const{
+void RooNCSplinePdfCore::getBArray(const std::vector<RooNCSplinePdfCore::T>& kappas, const vector<RooNCSplinePdfCore::T>& fcnList, std::vector<RooNCSplinePdfCore::T>& BArray)const{
   BArray.clear();
   int npoints=kappas.size();
   if (npoints!=(int)fcnList.size()){
@@ -99,13 +61,13 @@ void RooNCSplinePdfCore::getBArray(const std::vector<Double_t>& kappas, const ve
   if (npoints>1){
     BArray.push_back(3.*(fcnList.at(1)-fcnList.at(0)));
     for (int j=1; j<npoints-1; j++){
-      Double_t val_j = fcnList.at(j);
-      Double_t val_jpo = fcnList.at(j+1);
-      Double_t val_jmo = fcnList.at(j-1);
-      Double_t kappa_j = kappas.at(j);
-      Double_t kappa_jmo = kappas.at(j-1);
-      Double_t rsq = pow(kappa_j/kappa_jmo, 2);
-      Double_t Bval = val_jpo*rsq + val_j*(1.-rsq) - val_jmo;
+      RooNCSplinePdfCore::T val_j = fcnList.at(j);
+      RooNCSplinePdfCore::T val_jpo = fcnList.at(j+1);
+      RooNCSplinePdfCore::T val_jmo = fcnList.at(j-1);
+      RooNCSplinePdfCore::T kappa_j = kappas.at(j);
+      RooNCSplinePdfCore::T kappa_jmo = kappas.at(j-1);
+      RooNCSplinePdfCore::T rsq = pow(kappa_j/kappa_jmo, 2);
+      RooNCSplinePdfCore::T Bval = val_jpo*rsq + val_j*(1.-rsq) - val_jmo;
       Bval *= 3.;
       BArray.push_back(Bval);
     }
@@ -113,18 +75,18 @@ void RooNCSplinePdfCore::getBArray(const std::vector<Double_t>& kappas, const ve
   }
   else if (npoints==1) BArray.push_back(0);
 }
-void RooNCSplinePdfCore::getAArray(const vector<Double_t>& kappas, vector<vector<Double_t>>& AArray)const{
+void RooNCSplinePdfCore::getAArray(const vector<RooNCSplinePdfCore::T>& kappas, vector<vector<RooNCSplinePdfCore::T>>& AArray)const{
   AArray.clear();
   Int_t npoints = kappas.size();
   for (int i=0; i<npoints; i++){
-    vector<Double_t> Ai(npoints, 0.);
+    vector<RooNCSplinePdfCore::T> Ai(npoints, 0.);
     if (npoints==1) Ai[0]=1;
     else if (i==0){ Ai[0]=2; Ai[1]=kappas.at(1)/kappas.at(0); }
     else if (i==npoints-1){ Ai[npoints-2]=1; Ai[npoints-1]=2.*kappas.at(npoints-1)/kappas.at(npoints-2); }
     else{
-      Double_t kappa_j = kappas.at(i);
-      Double_t kappa_jmo = kappas.at(i-1);
-      Double_t kappa_jpo = kappas.at(i+1);
+      RooNCSplinePdfCore::T kappa_j = kappas.at(i);
+      RooNCSplinePdfCore::T kappa_jmo = kappas.at(i-1);
+      RooNCSplinePdfCore::T kappa_jpo = kappas.at(i+1);
 
       Ai[i-1]=1;
       Ai[i]=2.*kappa_j/kappa_jmo*(1.+kappa_j/kappa_jmo);
@@ -134,16 +96,16 @@ void RooNCSplinePdfCore::getAArray(const vector<Double_t>& kappas, vector<vector
   }
 }
 
-vector<Double_t> RooNCSplinePdfCore::getCoefficients(const TVectorD& S, const vector<Double_t>& kappas, const vector<Double_t>& fcnList, const Int_t& bin)const{
-  Double_t A=0, B=0, C=0, D=0;
-  vector<Double_t> res;
+vector<RooNCSplinePdfCore::T> RooNCSplinePdfCore::getCoefficients(const TVectorD& S, const vector<RooNCSplinePdfCore::T>& kappas, const vector<RooNCSplinePdfCore::T>& fcnList, const Int_t& bin)const{
+  RooNCSplinePdfCore::T A=0, B=0, C=0, D=0;
+  vector<RooNCSplinePdfCore::T> res;
 
   const int fcnsize = fcnList.size();
   if (fcnsize>bin){
     A=fcnList.at(bin);
     B=S[bin];
     if (fcnsize>(bin+1)){
-      Double_t dFcn = fcnList.at(bin+1)-A;
+      RooNCSplinePdfCore::T dFcn = fcnList.at(bin+1)-A;
       C = 3.*dFcn - 2.*B - S[bin+1]*kappas.at(bin+1)/kappas.at(bin);
       D = -2.*dFcn + B + S[bin+1]*kappas.at(bin+1)/kappas.at(bin);
     }
@@ -155,8 +117,8 @@ vector<Double_t> RooNCSplinePdfCore::getCoefficients(const TVectorD& S, const ve
   res.push_back(D);
   return res;
 }
-vector<vector<Double_t>> RooNCSplinePdfCore::getCoefficientsAlongDirection(const std::vector<Double_t>& kappas, const TMatrixD& Ainv, const vector<Double_t>& fcnList, const Int_t pickBin)const{
-  vector<Double_t> BArray;
+vector<vector<RooNCSplinePdfCore::T>> RooNCSplinePdfCore::getCoefficientsAlongDirection(const std::vector<RooNCSplinePdfCore::T>& kappas, const TMatrixD& Ainv, const vector<RooNCSplinePdfCore::T>& fcnList, const Int_t pickBin)const{
+  vector<RooNCSplinePdfCore::T> BArray;
   getBArray(kappas, fcnList, BArray);
 
   Int_t npoints = BArray.size();
@@ -164,19 +126,19 @@ vector<vector<Double_t>> RooNCSplinePdfCore::getCoefficientsAlongDirection(const
   for (int i=0; i<npoints; i++) Btrans[i]=BArray.at(i);
   TVectorD Strans = Ainv*Btrans;
 
-  vector<vector<Double_t>> coefs;
+  vector<vector<RooNCSplinePdfCore::T>> coefs;
   for (Int_t bin=0; bin<(npoints>1 ? npoints-1 : 1); bin++){
     if (pickBin>=0 && bin!=pickBin) continue;
-    vector<Double_t> coef = getCoefficients(Strans, kappas, fcnList, bin);
+    vector<RooNCSplinePdfCore::T> coef = getCoefficients(Strans, kappas, fcnList, bin);
     coefs.push_back(coef);
   }
   return coefs;
 }
 
-Double_t RooNCSplinePdfCore::evalSplineSegment(const std::vector<Double_t>& coefs, const Double_t kappa, Double_t tup, Double_t tdn, Bool_t doIntegrate)const{
-  Double_t res=0;
+RooNCSplinePdfCore::T RooNCSplinePdfCore::evalSplineSegment(const std::vector<RooNCSplinePdfCore::T>& coefs, const RooNCSplinePdfCore::T kappa, RooNCSplinePdfCore::T tup, RooNCSplinePdfCore::T tdn, Bool_t doIntegrate)const{
+  RooNCSplinePdfCore::T res=0;
   for (unsigned int ic=0; ic<coefs.size(); ic++){
-    if (doIntegrate) res += coefs.at(ic)*(pow(tup, (int)(ic+1))-pow(tdn, (int)(ic+1)))/((Double_t)(ic+1))/kappa;
+    if (doIntegrate) res += coefs.at(ic)*(pow(tup, (int)(ic+1))-pow(tdn, (int)(ic+1)))/((RooNCSplinePdfCore::T)(ic+1))/kappa;
     else res += coefs.at(ic)*pow(tup, (int)ic);
   }
   return res;

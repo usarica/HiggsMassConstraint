@@ -11,6 +11,8 @@
 
 class RooNCSplinePdfCore : public RooAbsPdf{
 public:
+  typedef Double_t T;
+
   enum VerbosityLevel{
     kSilent,
     kVerbose
@@ -24,9 +26,8 @@ public:
   RooNCSplinePdfCore(
     const char* name,
     const char* title,
-    RooAbsReal* inXVar,
-    const RooArgList* inXList,
-    bool inUseConst=false
+    RooAbsReal& inXVar,
+    std::vector<T>& inXList
     );
   RooNCSplinePdfCore(const RooNCSplinePdfCore& other, const char* name=0);
   virtual TObject* clone(const char* newname)const=0;
@@ -36,29 +37,27 @@ public:
 
 protected:
   VerbosityLevel verbosity;
-  const Bool_t useConst;
 
   RooRealProxy theXVar;
-  RooListProxy XList;
-  Int_t npointsX;
+  std::vector<T> XList;
+  
+  unsigned int npointsX()const{ return XList.size()-1; }
 
-  virtual void setProxyList(const RooArgList* list, RooListProxy& proxy);
-
-  virtual Int_t getWhichBin(const Double_t& val, const Int_t whichDirection)const = 0;
-  virtual void getKappa(std::vector<Double_t>& kappas, const Int_t whichDirection)const = 0;
-  virtual Double_t getTVar(const std::vector<Double_t>& kappas, const Double_t& val, const Int_t& bin, const Int_t whichDirection)const = 0;
+  virtual Int_t getWhichBin(const T& val, const Int_t whichDirection)const = 0;
+  virtual void getKappa(std::vector<T>& kappas, const Int_t whichDirection)const = 0;
+  virtual T getTVar(const std::vector<T>& kappas, const T& val, const Int_t& bin, const Int_t whichDirection)const = 0;
 
   virtual Double_t interpolateFcn(Int_t code, const char* rangeName=0)const = 0;
   virtual Double_t evaluate()const = 0;
   virtual Int_t getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* rangeName=0)const = 0;
   virtual Double_t analyticalIntegral(Int_t code, const char* rangeName=0)const = 0;
 
-  virtual void getBArray(const std::vector<Double_t>& kappas, const std::vector<Double_t>& fcnList, std::vector<Double_t>& BArray)const;
-  virtual void getAArray(const std::vector<Double_t>& kappas, std::vector<std::vector<Double_t>>& AArray)const;
-  virtual std::vector<std::vector<Double_t>> getCoefficientsAlongDirection(const std::vector<Double_t>& kappas, const TMatrixD& Ainv, const std::vector<Double_t>& fcnList, const Int_t pickBin)const;
-  virtual std::vector<Double_t> getCoefficients(const TVectorD& S, const std::vector<Double_t>& kappas, const std::vector<Double_t>& fcnList, const Int_t& bin)const;
+  virtual void getBArray(const std::vector<T>& kappas, const std::vector<T>& fcnList, std::vector<T>& BArray)const;
+  virtual void getAArray(const std::vector<T>& kappas, std::vector<std::vector<T>>& AArray)const;
+  virtual std::vector<std::vector<T>> getCoefficientsAlongDirection(const std::vector<T>& kappas, const TMatrixD& Ainv, const std::vector<T>& fcnList, const Int_t pickBin)const;
+  virtual std::vector<T> getCoefficients(const TVectorD& S, const std::vector<T>& kappas, const std::vector<T>& fcnList, const Int_t& bin)const;
 
-  virtual Double_t evalSplineSegment(const std::vector<Double_t>& coefs, const Double_t kappa, Double_t tup, Double_t tdn=0, Bool_t doIntegrate=false)const;
+  virtual Double_t evalSplineSegment(const std::vector<T>& coefs, const T kappa, T tup, T tdn=0, Bool_t doIntegrate=false)const;
 
 protected:
   ClassDef(RooNCSplinePdfCore, 0)

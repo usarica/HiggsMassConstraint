@@ -48,11 +48,8 @@
 #pragma link C++ class RooSlicePdf+;
 #pragma link C++ class RooHistSlicePdf+;
 #pragma link C++ class RooNCSplinePdfCore+;
-#pragma link C++ class RooNCSplinePdf_1D+;
 #pragma link C++ class RooNCSplinePdf_1D_fast+;
-#pragma link C++ class RooNCSplinePdf_2D+;
 #pragma link C++ class RooNCSplinePdf_2D_fast+;
-#pragma link C++ class RooNCSplinePdf_3D+;
 #pragma link C++ class RooNCSplinePdf_3D_fast+;
 
 #endif

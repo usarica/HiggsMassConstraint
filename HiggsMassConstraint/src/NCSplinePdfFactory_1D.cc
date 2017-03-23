@@ -1,22 +1,16 @@
 #include "NCSplinePdfFactory_1D.h"
+#include <cassert>
 
 using namespace std;
 
 
-NCSplinePdfFactory_1D::NCSplinePdfFactory_1D(RooAbsReal* splineVar_, TString appendName_) :
+NCSplinePdfFactory_1D::NCSplinePdfFactory_1D(RooAbsReal& splineVar_, TString appendName_) :
 appendName(appendName_),
-splineVar(splineVar_),
+splineVar(&splineVar_),
 PDF(0)
 {}
 NCSplinePdfFactory_1D::~NCSplinePdfFactory_1D(){
   destroyPDF();
-  destroyPoints();
-}
-void NCSplinePdfFactory_1D::destroyPoints(){
-  for (unsigned int ip=0; ip<points.size(); ip++){
-    delete points.at(ip).first; delete points.at(ip).second;
-  }
-  points.clear();
 }
 void NCSplinePdfFactory_1D::setPoints(TGraph* tg){
   vector<Double_t> XList, FcnList;
@@ -26,36 +20,27 @@ void NCSplinePdfFactory_1D::setPoints(TGraph* tg){
   for (int ip=0; ip<n; ip++){ XList.push_back(xx[ip]); FcnList.push_back(yy[ip]); }
   setPoints(XList, FcnList);
 }
-void NCSplinePdfFactory_1D::setPoints(const std::vector<Double_t>& XList, const std::vector<Double_t>& FcnList){
-  initPoints(XList, FcnList);
-  initPDF();
-}
-void NCSplinePdfFactory_1D::initPoints(const std::vector<Double_t>& XList, const std::vector<Double_t>& FcnList){
-  // Flush the points array
-  destroyPoints();
-
-  unsigned int n = XList.size();
-  for (unsigned int ip=0; ip<n; ip++){
-    TString xname = Form("point_%i_x", ip);
-    TString yname = Form("point_%i_y", ip);
-    if (appendName!=""){
-      xname = Form("%s_%s", xname.Data(), appendName.Data());
-      yname = Form("%s_%s", yname.Data(), appendName.Data());
-    }
-    RooConstVar* xvar = new RooConstVar(xname, xname, XList.at(ip));
-    RooConstVar* yvar = new RooConstVar(yname, yname, FcnList.at(ip));
-    points.push_back(pair<RooConstVar*, RooConstVar*>(xvar, yvar));
+const std::vector<std::pair<RooNCSplinePdfCore::T, RooNCSplinePdfCore::T>> NCSplinePdfFactory_1D::getPoints(const std::vector<RooNCSplinePdfCore::T>& XList, const std::vector<RooNCSplinePdfCore::T>& FcnList){
+  unsigned int nX = XList.size();
+  unsigned int n = FcnList.size();
+  if (nX!=n){
+    cerr << "NCSplinePdfFactory_1D::getPoints: nX=" << nX << " != nFcn=" << n << endl;
+    assert(0);
   }
+  std::vector<std::pair<RooNCSplinePdfCore::T, RooNCSplinePdfCore::T>> pList; pList.reserve(n);
+  for (unsigned int ip=0; ip<n; ip++) pList.push_back(pair<RooNCSplinePdfCore::T, RooNCSplinePdfCore::T>(XList.at(ip), FcnList.at(ip)));
+  return pList;
 }
 
 void NCSplinePdfFactory_1D::destroyPDF(){ delete PDF; PDF=0; }
-void NCSplinePdfFactory_1D::initPDF(){
+void NCSplinePdfFactory_1D::initPDF(const std::vector<std::pair<RooNCSplinePdfCore::T, RooNCSplinePdfCore::T>>& pList){
   destroyPDF();
 
-  RooArgList XList, FcnList;
-  for (unsigned int ip=0; ip<points.size(); ip++){
-    XList.add(*(points.at(ip).first));
-    FcnList.add(*(points.at(ip).second));
+  std::vector<RooNCSplinePdfCore::T> XList;
+  std::vector<RooNCSplinePdfCore::T> FcnList;
+  for (unsigned int ip=0; ip<pList.size(); ip++){
+    XList.push_back(pList.at(ip).first);
+    FcnList.push_back(pList.at(ip).second);
   }
 
   TString name = "PDF";
@@ -64,9 +49,8 @@ void NCSplinePdfFactory_1D::initPDF(){
   PDF = new RooNCSplinePdf_1D_fast(
     name.Data(),
     title.Data(),
-    splineVar,
-    &XList,
-    &FcnList
+    *splineVar,
+    XList, FcnList
     );
 }
 RooNCSplinePdf_1D_fast* NCSplinePdfFactory_1D::getPDF(){ return PDF; }

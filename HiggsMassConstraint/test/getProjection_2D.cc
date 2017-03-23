@@ -279,7 +279,7 @@ void getProjection_2D_single_HVV(string gSet, string decaytype, string strprojva
 
       TString gifCmd;
 
-      NCSplinePdfFactory_2D* spFactory = new NCSplinePdfFactory_2D(projvars.at(0), projvars.at(1));
+      NCSplinePdfFactory_2D* spFactory = new NCSplinePdfFactory_2D(*(projvars.at(0)), *(projvars.at(1)));
       spFactory->setPoints(points);
       RooNCSplinePdf_2D_fast* spPDF = spFactory->getPDF();
 

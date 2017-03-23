@@ -6,31 +6,38 @@
 #include "RooRealProxy.h"
 #include "RooRealVar.h"
 #include "RooAbsReal.h"
-#include "RooNCSplinePdf_1D.h"
+#include "RooNCSplinePdfCore.h"
 
 
-class RooNCSplinePdf_1D_fast : public RooNCSplinePdf_1D{
+class RooNCSplinePdf_1D_fast : public RooNCSplinePdfCore{
 protected:
-  std::vector<Double_t> kappaX;
-  std::vector<std::vector<Double_t>> coefficients;
+  std::vector<T> FcnList; // List of function values
+
+  std::vector<T> kappaX;
+  std::vector<std::vector<T>> coefficients;
 
 public:
   RooNCSplinePdf_1D_fast();
   RooNCSplinePdf_1D_fast(
     const char* name,
     const char* title,
-    RooAbsReal* inXVar,
-    const RooArgList* inXList,
-    const RooArgList* inFcnList
+    RooAbsReal& inXVar,
+    std::vector<T>& inXList,
+    std::vector<T>& inFcnList
     );
   RooNCSplinePdf_1D_fast(const RooNCSplinePdf_1D_fast& other, const char* name=0);
 	virtual TObject* clone(const char* newname)const { return new RooNCSplinePdf_1D_fast(*this, newname); }
 	inline virtual ~RooNCSplinePdf_1D_fast(){}
 
 protected:
-  virtual Double_t interpolateFcn(Int_t code, const char* rangeName=0)const;
+  virtual Int_t getWhichBin(const T& val, const Int_t whichDirection)const;
+  virtual void getKappa(std::vector<T>& kappas, const Int_t whichDirection)const;
+  virtual T getTVar(const std::vector<T>& kappas, const T& val, const Int_t& bin, const Int_t whichDirection)const;
+
+  virtual T interpolateFcn(Int_t code, const char* rangeName=0)const;
 
   virtual Double_t evaluate()const;
+  virtual Int_t getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* rangeName=0)const;
   virtual Double_t analyticalIntegral(Int_t code, const char* rangeName=0)const;
 
 private:

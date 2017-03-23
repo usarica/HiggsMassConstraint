@@ -302,7 +302,7 @@ void getProjection_3D_single_HVV(string gSet, string decaytype, string strprojva
     TString gifCmd;
 
     cout << "Constructing 3D spline" << endl;
-    NCSplinePdfFactory_3D* spFactory = new NCSplinePdfFactory_3D(projvars.at(0), projvars.at(1), projvars.at(2));
+    NCSplinePdfFactory_3D* spFactory = new NCSplinePdfFactory_3D(*(projvars.at(0)), *(projvars.at(1)), *(projvars.at(2)));
     cout << "Setting 3D spline points" << endl;
     spFactory->setPoints(points);
     cout << "Done" << endl;
