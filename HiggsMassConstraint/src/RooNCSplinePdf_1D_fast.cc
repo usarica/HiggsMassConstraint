@@ -1,15 +1,8 @@
 #include "RooNCSplinePdf_1D_fast.h" 
 #include <cmath>
+#include "TMath.h"
 #include "Riostream.h" 
 #include "RooAbsReal.h" 
-#include "RooConstVar.h" 
-#include "RooAbsCategory.h" 
-#include "TH3F.h"
-#include "TAxis.h"
-#include "TMath.h"
-#include "TMatrixD.h"
-#include "TVectorD.h"
-#include "RooDataHist.h"
 
 using namespace TMath;
 using namespace RooFit;
@@ -33,12 +26,12 @@ FcnList(inFcnList)
   if (npointsX()>1){
     int npoints;
 
-    vector<vector<RooNCSplinePdfCore::T>> xA; getKappa(kappaX, 0); getAArray(kappaX, xA);
+    vector<vector<RooNCSplinePdfCore::T>> xA; getKappas(kappaX, 0); getAArray(kappaX, xA);
     npoints=kappaX.size();
-    TMatrixD xAtrans(npoints, npoints);
+    TMatrix_t xAtrans(npoints, npoints);
     for (int i=0; i<npoints; i++){ for (int j=0; j<npoints; j++){ xAtrans[i][j]=xA.at(i).at(j); } }
-    RooNCSplinePdfCore::T det=0;
-    TMatrixD xAinv = xAtrans.Invert(&det);
+    Double_t det=0;
+    TMatrix_t xAinv = xAtrans.Invert(&det);
     if (det==0.){
       coutE(InputArguments) << "RooNCSplinePdf_1D::interpolateFcn: Matrix xA could not be inverted. Something is wrong with the x coordinates of points!" << endl;
       assert(0);
@@ -47,6 +40,8 @@ FcnList(inFcnList)
     coefficients = getCoefficientsAlongDirection(kappaX, xAinv, FcnList, -1);
   }
   else assert(0);
+
+  emptyFcnList();
 }
 
 RooNCSplinePdf_1D_fast::RooNCSplinePdf_1D_fast(
@@ -60,7 +55,7 @@ RooNCSplinePdf_1D_fast::RooNCSplinePdf_1D_fast(
 {}
 
 RooNCSplinePdfCore::T RooNCSplinePdf_1D_fast::interpolateFcn(Int_t code, const char* rangeName)const{
-  RooNCSplinePdfCore::T res = 0;
+  DefaultAccumulator<RooNCSplinePdfCore::T> res=RooNCSplinePdfCore::T(0);
 
   // Get bins
   Int_t xbin=-1, xbinmin=-1, xbinmax=-1;
@@ -95,10 +90,10 @@ RooNCSplinePdfCore::T RooNCSplinePdf_1D_fast::interpolateFcn(Int_t code, const c
     res += evalSplineSegment(coefficients.at(ix), kappaX.at(ix), txhigh, txlow, (code>0 && code%2==0));
   }
 
-  return res;
+  return res.sum();
 }
 
-void RooNCSplinePdf_1D_fast::getKappa(vector<RooNCSplinePdfCore::T>& kappas, const Int_t /*whichDirection*/)const{
+void RooNCSplinePdf_1D_fast::getKappas(vector<RooNCSplinePdfCore::T>& kappas, const Int_t /*whichDirection*/)const{
   kappas.clear();
   RooNCSplinePdfCore::T kappa=1;
 

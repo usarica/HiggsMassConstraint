@@ -426,7 +426,7 @@ void getProjection_3D_single_HVV(string gSet, string decaytype, string strprojva
       plot->GetYaxis()->SetTitle(Form("H%s amplitude", decaytype.c_str()));
       plot->GetXaxis()->SetNdivisions(-505);
       plot->SetTitle(Form("Projection at mH=%.2f GeV", mPOLE));
-      spPDF->setVerbosity(RooNCSplinePdfCore::kVerbose);
+      //spPDF->setVerbosity(RooNCSplinePdfCore::kVerbose);
       cout << "Projecting spline" << endl;
       spPDF->plotOn(plot, LineColor(kRed), LineWidth(2), LineStyle(1), Project(projSet));
       cout << "Projecting mela" << endl;

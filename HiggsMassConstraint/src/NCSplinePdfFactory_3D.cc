@@ -12,7 +12,7 @@ NCSplinePdfFactory_3D::~NCSplinePdfFactory_3D(){
   destroyPDF();
 }
 
-void NCSplinePdfFactory_3D::addUnique(std::vector<Double_t>& list, Double_t val){
+void NCSplinePdfFactory_3D::addUnique(std::vector<RooNCSplinePdfCore::T>& list, RooNCSplinePdfCore::T val){
   for (unsigned int ip=0; ip<list.size(); ip++){ if (list.at(ip)==val) return; }
   list.push_back(val);
 }
@@ -27,7 +27,7 @@ const std::vector<doubleQuadruplet_t> NCSplinePdfFactory_3D::getPoints(
   unsigned int nZ = ZList.size();
   unsigned int n = FcnList.size();
   if (nX*nY*nZ!=n){
-    cerr << "NCSplinePdfFactory_1D::getPoints: nX=" << nX << " x nY=" << nY << " x nZ=" << nZ << " != nFcn=" << n << endl;
+    cerr << "NCSplinePdfFactory_3D::getPoints: nX=" << nX << " x nY=" << nY << " x nZ=" << nZ << " != nFcn=" << n << endl;
     assert(0);
   }
 

@@ -2,9 +2,6 @@
 #include <cmath>
 #include "Riostream.h" 
 #include "TMath.h"
-#include "TMatrixD.h"
-#include "TVectorD.h"
-#include "TIterator.h"
 
 using namespace TMath;
 using namespace RooFit;
@@ -96,7 +93,7 @@ void RooNCSplinePdfCore::getAArray(const vector<RooNCSplinePdfCore::T>& kappas, 
   }
 }
 
-vector<RooNCSplinePdfCore::T> RooNCSplinePdfCore::getCoefficients(const TVectorD& S, const vector<RooNCSplinePdfCore::T>& kappas, const vector<RooNCSplinePdfCore::T>& fcnList, const Int_t& bin)const{
+vector<RooNCSplinePdfCore::T> RooNCSplinePdfCore::getCoefficients(const TVector_t& S, const vector<RooNCSplinePdfCore::T>& kappas, const vector<RooNCSplinePdfCore::T>& fcnList, const Int_t& bin)const{
   RooNCSplinePdfCore::T A=0, B=0, C=0, D=0;
   vector<RooNCSplinePdfCore::T> res;
 
@@ -105,9 +102,15 @@ vector<RooNCSplinePdfCore::T> RooNCSplinePdfCore::getCoefficients(const TVectorD
     A=fcnList.at(bin);
     B=S[bin];
     if (fcnsize>(bin+1)){
-      RooNCSplinePdfCore::T dFcn = fcnList.at(bin+1)-A;
-      C = 3.*dFcn - 2.*B - S[bin+1]*kappas.at(bin+1)/kappas.at(bin);
-      D = -2.*dFcn + B + S[bin+1]*kappas.at(bin+1)/kappas.at(bin);
+      DefaultAccumulator<RooNCSplinePdfCore::T> dFcn = fcnList.at(bin+1); dFcn -= A;
+
+      DefaultAccumulator<RooNCSplinePdfCore::T> Cacc = RooNCSplinePdfCore::T(3.)*dFcn.sum();
+      Cacc -= 2.*B; Cacc -= S[bin+1]*kappas.at(bin+1)/kappas.at(bin);
+      C = Cacc.sum();
+
+      DefaultAccumulator<RooNCSplinePdfCore::T> Dacc = RooNCSplinePdfCore::T(-2.)*dFcn.sum();
+      Dacc += B; Dacc += S[bin+1]*kappas.at(bin+1)/kappas.at(bin);
+      D = Dacc.sum();
     }
   }
 
@@ -117,14 +120,14 @@ vector<RooNCSplinePdfCore::T> RooNCSplinePdfCore::getCoefficients(const TVectorD
   res.push_back(D);
   return res;
 }
-vector<vector<RooNCSplinePdfCore::T>> RooNCSplinePdfCore::getCoefficientsAlongDirection(const std::vector<RooNCSplinePdfCore::T>& kappas, const TMatrixD& Ainv, const vector<RooNCSplinePdfCore::T>& fcnList, const Int_t pickBin)const{
+vector<vector<RooNCSplinePdfCore::T>> RooNCSplinePdfCore::getCoefficientsAlongDirection(const std::vector<RooNCSplinePdfCore::T>& kappas, const TMatrix_t& Ainv, const vector<RooNCSplinePdfCore::T>& fcnList, const Int_t pickBin)const{
   vector<RooNCSplinePdfCore::T> BArray;
   getBArray(kappas, fcnList, BArray);
 
   Int_t npoints = BArray.size();
-  TVectorD Btrans(npoints);
+  TVector_t Btrans(npoints);
   for (int i=0; i<npoints; i++) Btrans[i]=BArray.at(i);
-  TVectorD Strans = Ainv*Btrans;
+  TVector_t Strans = Ainv*Btrans;
 
   vector<vector<RooNCSplinePdfCore::T>> coefs;
   for (Int_t bin=0; bin<(npoints>1 ? npoints-1 : 1); bin++){
@@ -136,12 +139,12 @@ vector<vector<RooNCSplinePdfCore::T>> RooNCSplinePdfCore::getCoefficientsAlongDi
 }
 
 RooNCSplinePdfCore::T RooNCSplinePdfCore::evalSplineSegment(const std::vector<RooNCSplinePdfCore::T>& coefs, const RooNCSplinePdfCore::T kappa, RooNCSplinePdfCore::T tup, RooNCSplinePdfCore::T tdn, Bool_t doIntegrate)const{
-  RooNCSplinePdfCore::T res=0;
+  DefaultAccumulator<RooNCSplinePdfCore::T> res=RooNCSplinePdfCore::T(0);
   for (unsigned int ic=0; ic<coefs.size(); ic++){
     if (doIntegrate) res += coefs.at(ic)*(pow(tup, (int)(ic+1))-pow(tdn, (int)(ic+1)))/((RooNCSplinePdfCore::T)(ic+1))/kappa;
     else res += coefs.at(ic)*pow(tup, (int)ic);
   }
-  return res;
+  return res.sum();
 }
 
 

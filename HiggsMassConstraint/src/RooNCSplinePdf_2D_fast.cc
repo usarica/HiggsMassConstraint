@@ -1,15 +1,8 @@
 #include "RooNCSplinePdf_2D_fast.h" 
 #include <cmath>
+#include "TMath.h"
 #include "Riostream.h" 
 #include "RooAbsReal.h" 
-#include "RooAbsCategory.h" 
-#include "RooConstVar.h" 
-#include "TH3F.h"
-#include "TAxis.h"
-#include "TMath.h"
-#include "TMatrixD.h"
-#include "TVectorD.h"
-#include "RooDataHist.h"
 
 using namespace TMath;
 using namespace RooFit;
@@ -38,25 +31,25 @@ RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast(
   if (npointsX()>1 && npointsY()>1){
     // Prepare A and kappa arrays for x and y coordinates
     int npoints;
-    RooNCSplinePdfCore::T det;
+    Double_t det;
 
-    vector<vector<RooNCSplinePdfCore::T>> xA; getKappa(kappaX, 0); getAArray(kappaX, xA);
+    vector<vector<RooNCSplinePdfCore::T>> xA; getKappas(kappaX, 0); getAArray(kappaX, xA);
     npoints=kappaX.size();
-    TMatrixD xAtrans(npoints, npoints);
+    TMatrix_t xAtrans(npoints, npoints);
     for (int i=0; i<npoints; i++){ for (int j=0; j<npoints; j++){ xAtrans[i][j]=xA.at(i).at(j); } }
     det=0;
-    TMatrixD xAinv = xAtrans.Invert(&det);
+    TMatrix_t xAinv = xAtrans.Invert(&det);
     if (det==0.){
       coutE(InputArguments) << "RooNCSplinePdf_2D_fast::interpolateFcn: Matrix xA could not be inverted. Something is wrong with the x coordinates of points!" << endl;
       assert(0);
     }
 
-    vector<vector<RooNCSplinePdfCore::T>> yA; getKappa(kappaY, 1); getAArray(kappaY, yA);
+    vector<vector<RooNCSplinePdfCore::T>> yA; getKappas(kappaY, 1); getAArray(kappaY, yA);
     npoints=kappaY.size();
-    TMatrixD yAtrans(npoints, npoints);
+    TMatrix_t yAtrans(npoints, npoints);
     for (int i=0; i<npoints; i++){ for (int j=0; j<npoints; j++){ yAtrans[i][j]=yA.at(i).at(j); } }
     det=0;
-    TMatrixD yAinv = yAtrans.Invert(&det);
+    TMatrix_t yAinv = yAtrans.Invert(&det);
     if (det==0.){
       coutE(InputArguments) << "RooNCSplinePdf_2D_fast::interpolateFcn: Matrix yA could not be inverted. Something is wrong with the y coordinates of points!" << endl;
       assert(0);
@@ -100,6 +93,8 @@ RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast(
     }
   }
   else assert(0);
+
+  emptyFcnList();
 }
 
 RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast(
@@ -117,7 +112,7 @@ RooNCSplinePdf_2D_fast::RooNCSplinePdf_2D_fast(
 
 
 RooNCSplinePdfCore::T RooNCSplinePdf_2D_fast::interpolateFcn(Int_t code, const char* rangeName)const{
-  RooNCSplinePdfCore::T res=0;
+  DefaultAccumulator<RooNCSplinePdfCore::T> res=RooNCSplinePdfCore::T(0);
 
   if (verbosity==RooNCSplinePdfCore::kVerbose){ cout << "RooNCSplinePdf_2D_fast(" << GetName() << ")::interpolateFcn begin with code: " << code << endl; }
 
@@ -171,7 +166,7 @@ RooNCSplinePdfCore::T RooNCSplinePdf_2D_fast::interpolateFcn(Int_t code, const c
 
       if (verbosity==RooNCSplinePdfCore::kVerbose) cout << "\tCoefficient " << ic << ":\n";
 
-      RooNCSplinePdfCore::T theCoef=0;
+      DefaultAccumulator<RooNCSplinePdfCore::T> theCoef=RooNCSplinePdfCore::T(0);
       for (int iy=0; iy<(int)yCoefs.size(); iy++){
         if (
           (ybin>=0 && iy!=ybin)
@@ -196,18 +191,18 @@ RooNCSplinePdfCore::T RooNCSplinePdf_2D_fast::interpolateFcn(Int_t code, const c
 
       //if (code==0) cout << "\tCoefficient is " << theCoef << endl;
 
-      xCoefs.push_back(theCoef);
+      xCoefs.push_back(theCoef.sum());
     }
 
     // Evaluate value of spline at x with coefficients evaluated at y
     res += evalSplineSegment(xCoefs, kappaX.at(ix), txhigh, txlow, (code>0 && code%2==0));
   }
 
-  return res;
+  return res.sum();
 }
 
 
-void RooNCSplinePdf_2D_fast::getKappa(vector<RooNCSplinePdfCore::T>& kappas, const Int_t whichDirection)const{
+void RooNCSplinePdf_2D_fast::getKappas(vector<RooNCSplinePdfCore::T>& kappas, const Int_t whichDirection)const{
   kappas.clear();
   RooNCSplinePdfCore::T kappa=1;
 
@@ -267,7 +262,7 @@ RooNCSplinePdfCore::T RooNCSplinePdf_2D_fast::getTVar(const vector<RooNCSplinePd
   return (val-coord->at(bin))*K;
 }
 
-vector<vector<RooNCSplinePdfCore::T>> RooNCSplinePdf_2D_fast::getCoefficientsPerY(const std::vector<RooNCSplinePdfCore::T>& kappaX, const TMatrixD& xAinv, const Int_t& ybin, const Int_t xbin)const{
+vector<vector<RooNCSplinePdfCore::T>> RooNCSplinePdf_2D_fast::getCoefficientsPerY(const std::vector<RooNCSplinePdfCore::T>& kappaX, const TMatrix_t& xAinv, const Int_t& ybin, const Int_t xbin)const{
   vector<RooNCSplinePdfCore::T> fcnList;
   for (unsigned int bin=0; bin<npointsX(); bin++){ fcnList.push_back(FcnList.at(ybin).at(bin)); }
   vector<vector<RooNCSplinePdfCore::T>> coefs = getCoefficientsAlongDirection(kappaX, xAinv, fcnList, xbin);

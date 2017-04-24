@@ -35,13 +35,15 @@ public:
 	inline virtual ~RooNCSplinePdf_2D_fast(){}
 
 protected:
-  unsigned int npointsY()const{ return YList.size()-1; }
+  virtual void emptyFcnList(){ std::vector<std::vector<T>> tmp; FcnList.swap(tmp); }
+
+  unsigned int npointsY()const{ return YList.size(); }
 
   virtual Int_t getWhichBin(const T& val, const Int_t whichDirection)const;
   virtual T getTVar(const std::vector<T>& kappas, const T& val, const Int_t& bin, const Int_t whichDirection)const;
-  virtual void getKappa(std::vector<T>& kappas, const Int_t whichDirection)const;
+  virtual void getKappas(std::vector<T>& kappas, const Int_t whichDirection)const;
 
-  virtual std::vector<std::vector<T>> getCoefficientsPerY(const std::vector<T>& kappaX, const TMatrixD& xAinv, const Int_t& ybin, const Int_t xbin)const; // xbin can be -1, which means push all of them
+  virtual std::vector<std::vector<T>> getCoefficientsPerY(const std::vector<T>& kappaX, const TMatrix_t& xAinv, const Int_t& ybin, const Int_t xbin)const; // xbin can be -1, which means push all of them
 
   virtual T interpolateFcn(Int_t code, const char* rangeName=0)const;
 
@@ -50,7 +52,9 @@ protected:
   virtual Double_t analyticalIntegral(Int_t code, const char* rangeName=0)const;
 
 private:
+
   ClassDef(RooNCSplinePdf_2D_fast, 1)
+
 };
  
 #endif
